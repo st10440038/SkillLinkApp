@@ -2,6 +2,7 @@ package com.example.skilllinkapp.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,8 +11,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocationOn
@@ -21,7 +24,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -37,6 +39,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.skilllinkapp.data.supabase
+import com.example.skilllinkapp.ui.theme.SkillLinkBackground
+import com.example.skilllinkapp.ui.theme.SkillLinkLightPurple
+import com.example.skilllinkapp.ui.theme.SkillLinkNavy
+import com.example.skilllinkapp.ui.theme.SkillLinkPurple
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
 import kotlinx.serialization.json.JsonObject
@@ -46,6 +52,7 @@ import kotlinx.serialization.json.jsonPrimitive
 fun ProfileScreen(
     onEditProfile: () -> Unit
 ) {
+
     var fullName by remember { mutableStateOf("User") }
     var email by remember { mutableStateOf("") }
     var biography by remember { mutableStateOf("") }
@@ -56,213 +63,309 @@ fun ProfileScreen(
 
     val user = supabase.auth.currentUserOrNull()
 
-    LaunchedEffect(Unit) {
+    // =========================================================
+    // LOAD PROFILE DATA
+    // =========================================================
+
+    LaunchedEffect(user?.id) {
+
+        if (user == null) {
+            return@LaunchedEffect
+        }
+
         try {
-            if (user != null) {
 
-                val profile = supabase
-                    .from("profiles")
-                    .select {
-                        filter {
-                            eq("user_id", user.id)
-                        }
+            // -------------------------------------------------
+            // Load profile
+            // -------------------------------------------------
+
+            val profile = supabase
+                .from("profiles")
+                .select {
+                    filter {
+                        eq("user_id", user.id)
                     }
-                    .decodeList<JsonObject>()
-                    .firstOrNull()
-
-                if (profile != null) {
-                    fullName =
-                        profile["full_name"]?.jsonPrimitive?.content
-                            ?: "User"
-
-                    email =
-                        profile["email"]?.jsonPrimitive?.content
-                            ?: user.email
-                                    ?: ""
-
-                    biography =
-                        profile["biography"]?.jsonPrimitive?.content
-                            ?: ""
-
-                    location =
-                        profile["location"]?.jsonPrimitive?.content
-                            ?: ""
-                } else {
-                    email = user.email ?: ""
                 }
+                .decodeList<JsonObject>()
+                .firstOrNull()
 
-                val roadmaps = supabase
-                    .from("roadmaps")
-                    .select {
-                        filter {
-                            eq("user_id", user.id)
-                        }
-                    }
-                    .decodeList<JsonObject>()
+            if (profile != null) {
 
-                roadmapCount = roadmaps.size
+                fullName =
+                    profile["full_name"]
+                        ?.jsonPrimitive
+                        ?.content
+                        ?.takeIf { it.isNotBlank() }
+                        ?: "User"
 
-                val skills = supabase
-                    .from("user_skills")
-                    .select {
-                        filter {
-                            eq("user_id", user.id)
-                        }
-                    }
-                    .decodeList<JsonObject>()
+                email =
+                    profile["email"]
+                        ?.jsonPrimitive
+                        ?.content
+                        ?.takeIf { it.isNotBlank() }
+                        ?: user.email
+                                ?: ""
 
-                skillsCount = skills.size
+                biography =
+                    profile["biography"]
+                        ?.jsonPrimitive
+                        ?.content
+                        ?: ""
+
+                location =
+                    profile["location"]
+                        ?.jsonPrimitive
+                        ?.content
+                        ?: ""
+
+            } else {
+
+                fullName = "User"
+                email = user.email ?: ""
+                biography = ""
+                location = ""
             }
+
+            // -------------------------------------------------
+            // Load roadmap count
+            // -------------------------------------------------
+
+            val roadmaps = supabase
+                .from("roadmaps")
+                .select {
+                    filter {
+                        eq("user_id", user.id)
+                    }
+                }
+                .decodeList<JsonObject>()
+
+            roadmapCount = roadmaps.size
+
+            // -------------------------------------------------
+            // Load skills count
+            // -------------------------------------------------
+
+            val skills = supabase
+                .from("user_skills")
+                .select {
+                    filter {
+                        eq("user_id", user.id)
+                    }
+                }
+                .decodeList<JsonObject>()
+
+            skillsCount = skills.size
+
         } catch (e: Exception) {
-            println("Profile loading error: ${e.message}")
+
+            println(
+                "Profile loading error: ${e.message}"
+            )
         }
     }
+
+    // =========================================================
+    // INITIALS
+    // =========================================================
 
     val initials = fullName
         .trim()
         .split(" ")
         .filter { it.isNotBlank() }
         .take(2)
-        .joinToString("") { it.first().uppercase() }
+        .joinToString("") {
+            it.first().uppercase()
+        }
+
+    // =========================================================
+    // SCREEN
+    // =========================================================
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF5F2FF))
-            .padding(20.dp),
+            .background(SkillLinkBackground)
+            .verticalScroll(rememberScrollState())
+            .padding(
+                horizontal = 20.dp,
+                vertical = 24.dp
+            ),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-        Spacer(modifier = Modifier.height(20.dp))
+        // =====================================================
+        // PROFILE PICTURE
+        // =====================================================
 
-        // Profile picture
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
+        Box(
+            modifier = Modifier
+                .size(112.dp)
+                .clip(CircleShape)
+                .background(SkillLinkLightPurple),
+            contentAlignment = Alignment.Center
         ) {
-            if (initials.isNotEmpty()) {
-                Text(
-                    text = initials,
-                    modifier = Modifier
-                        .size(100.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF7656E8))
-                        .padding(25.dp),
-                    color = Color.White,
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            } else {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = "Profile",
-                    modifier = Modifier
-                        .size(100.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF7656E8))
-                        .padding(25.dp),
-                    tint = Color.White
-                )
-            }
 
-            Spacer(modifier = Modifier.height(14.dp))
-
-            Text(
-                text = fullName,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF202035)
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = email,
-                fontSize = 14.sp,
-                color = Color(0xFF85849A)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Bio
-        if (biography.isNotBlank()) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color.White
-                )
+            Box(
+                modifier = Modifier
+                    .size(92.dp)
+                    .clip(CircleShape)
+                    .background(SkillLinkPurple),
+                contentAlignment = Alignment.Center
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
+
+                if (initials.isNotEmpty()) {
+
                     Text(
-                        text = "About me",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF202035)
+                        text = initials,
+                        color = Color.White,
+                        fontSize = 30.sp,
+                        fontWeight = FontWeight.Bold
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                } else {
 
-                    Text(
-                        text = biography,
-                        fontSize = 14.sp,
-                        color = Color(0xFF85849A)
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Profile",
+                        modifier = Modifier.size(42.dp),
+                        tint = Color.White
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
         }
 
-        // Location
-        if (location.isNotBlank()) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color.White
+        Spacer(
+            modifier = Modifier.height(16.dp)
+        )
+
+        // =====================================================
+        // NAME
+        // =====================================================
+
+        Text(
+            text = fullName,
+            fontSize = 25.sp,
+            fontWeight = FontWeight.Bold,
+            color = SkillLinkNavy
+        )
+
+        Spacer(
+            modifier = Modifier.height(5.dp)
+        )
+
+        // =====================================================
+        // EMAIL
+        // =====================================================
+
+        Text(
+            text = email,
+            fontSize = 14.sp,
+            color = Color(0xFF85849A)
+        )
+
+        Spacer(
+            modifier = Modifier.height(26.dp)
+        )
+
+        // =====================================================
+        // BIO
+        // =====================================================
+
+        if (biography.isNotBlank()) {
+
+            ProfileSectionCard {
+
+                Text(
+                    text = "About me",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = SkillLinkNavy
                 )
-            ) {
+
+                Spacer(
+                    modifier = Modifier.height(9.dp)
+                )
+
+                Text(
+                    text = biography,
+                    fontSize = 14.sp,
+                    lineHeight = 21.sp,
+                    color = Color(0xFF656376)
+                )
+            }
+
+            Spacer(
+                modifier = Modifier.height(14.dp)
+            )
+        }
+
+        // =====================================================
+        // LOCATION
+        // =====================================================
+
+        if (location.isNotBlank()) {
+
+            ProfileSectionCard {
+
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.LocationOn,
-                        contentDescription = "Location",
-                        tint = Color(0xFF7656E8)
+
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(SkillLinkLightPurple),
+                        contentAlignment = Alignment.Center
+                    ) {
+
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = "Location",
+                            tint = SkillLinkPurple,
+                            modifier = Modifier.size(21.dp)
+                        )
+                    }
+
+                    Spacer(
+                        modifier = Modifier.size(13.dp)
                     )
 
-                    Spacer(modifier = Modifier.size(10.dp))
-
                     Column {
+
                         Text(
                             text = "Location",
-                            fontSize = 13.sp,
+                            fontSize = 12.sp,
                             color = Color(0xFF85849A)
+                        )
+
+                        Spacer(
+                            modifier = Modifier.height(3.dp)
                         )
 
                         Text(
                             text = location,
                             fontSize = 15.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color(0xFF202035)
+                            fontWeight = FontWeight.SemiBold,
+                            color = SkillLinkNavy
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(
+                modifier = Modifier.height(20.dp)
+            )
         }
 
-        // Statistics
+        // =====================================================
+        // STATISTICS
+        // =====================================================
+
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
 
             ProfileStatCard(
@@ -284,34 +387,82 @@ fun ProfileScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(
+            modifier = Modifier.height(22.dp)
+        )
 
-        // Edit profile
+        // =====================================================
+        // EDIT PROFILE
+        // =====================================================
+
         Button(
             onClick = onEditProfile,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp),
-            shape = RoundedCornerShape(14.dp),
+                .height(54.dp),
+            shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF7656E8)
+                containerColor = SkillLinkPurple
             )
         ) {
+
             Icon(
                 imageVector = Icons.Default.Edit,
-                contentDescription = "Edit profile"
+                contentDescription = "Edit profile",
+                modifier = Modifier.size(19.dp)
             )
 
-            Spacer(modifier = Modifier.size(8.dp))
+            Spacer(
+                modifier = Modifier.size(8.dp)
+            )
 
             Text(
                 text = "Edit Profile",
-                fontSize = 16.sp,
+                fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold
             )
         }
+
+        Spacer(
+            modifier = Modifier.height(20.dp)
+        )
     }
 }
+
+
+// =============================================================
+// PROFILE SECTION CARD
+// =============================================================
+
+@Composable
+private fun ProfileSectionCard(
+    content: @Composable () -> Unit
+) {
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 0.dp
+        )
+    ) {
+
+        Column(
+            modifier = Modifier.padding(18.dp)
+        ) {
+
+            content()
+        }
+    }
+}
+
+
+// =============================================================
+// PROFILE STAT CARD
+// =============================================================
 
 @Composable
 private fun ProfileStatCard(
@@ -319,31 +470,42 @@ private fun ProfileStatCard(
     value: String,
     modifier: Modifier = Modifier
 ) {
+
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color.White
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 0.dp
         )
     ) {
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 16.dp),
+                .padding(
+                    vertical = 17.dp,
+                    horizontal = 6.dp
+                ),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+
             Text(
                 text = value,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF7656E8)
+                color = SkillLinkPurple
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(
+                modifier = Modifier.height(5.dp)
+            )
 
             Text(
                 text = title,
-                fontSize = 12.sp,
+                fontSize = 11.sp,
                 color = Color(0xFF85849A)
             )
         }

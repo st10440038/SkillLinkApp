@@ -1,6 +1,8 @@
 package com.example.skilllinkapp.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,8 +18,8 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -57,9 +59,16 @@ fun EditProfileScreen(
     val coroutineScope = rememberCoroutineScope()
     val user = supabase.auth.currentUserOrNull()
 
-    // Load existing profile
+    // Android system back button
+    BackHandler {
+        onBack()
+    }
+
+    // Load profile
     LaunchedEffect(Unit) {
+
         try {
+
             if (user != null) {
 
                 val profile = supabase
@@ -73,6 +82,7 @@ fun EditProfileScreen(
                     .firstOrNull()
 
                 if (profile != null) {
+
                     fullName =
                         profile["full_name"]
                             ?.toString()
@@ -92,8 +102,12 @@ fun EditProfileScreen(
                             ?: ""
                 }
             }
+
         } catch (e: Exception) {
-            println("Edit profile loading error: ${e.message}")
+
+            println(
+                "Edit profile loading error: ${e.message}"
+            )
         }
 
         isLoading = false
@@ -115,18 +129,25 @@ fun EditProfileScreen(
             .padding(20.dp)
     ) {
 
-        // Top bar
+        // =====================================================
+        // TOP BAR
+        // =====================================================
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
+
             IconButton(
-                onClick = onBack
+                onClick = {
+                    onBack()
+                }
             ) {
+
                 Icon(
                     imageVector = Icons.Default.ArrowBack,
                     contentDescription = "Back",
-                    tint = Color(0xFF202035)
+                    tint = Color(0xFF7656E8)
                 )
             }
 
@@ -138,7 +159,13 @@ fun EditProfileScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(
+            modifier = Modifier.height(20.dp)
+        )
+
+        // =====================================================
+        // LOADING
+        // =====================================================
 
         if (isLoading) {
 
@@ -146,15 +173,20 @@ fun EditProfileScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+
                 Text(
                     text = "Loading profile...",
-                    color = Color(0xFF85849A)
+                    color = Color(0xFF85849A),
+                    fontSize = 15.sp
                 )
             }
 
         } else {
 
-            // Profile picture
+            // =================================================
+            // PROFILE IMAGE
+            // =================================================
+
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -162,36 +194,50 @@ fun EditProfileScreen(
 
                 if (initials.isNotEmpty()) {
 
-                    Text(
-                        text = initials,
+                    Box(
                         modifier = Modifier
                             .size(100.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFF7656E8))
-                            .padding(25.dp),
-                        color = Color.White,
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                            .background(Color(0xFF7656E8)),
+                        contentAlignment = Alignment.Center
+                    ) {
+
+                        Text(
+                            text = initials,
+                            color = Color.White,
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
 
                 } else {
 
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "Profile picture",
+                    Box(
                         modifier = Modifier
                             .size(100.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFF7656E8))
-                            .padding(25.dp),
-                        tint = Color.White
-                    )
+                            .background(Color(0xFF7656E8)),
+                        contentAlignment = Alignment.Center
+                    ) {
+
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Profile picture",
+                            modifier = Modifier.size(50.dp),
+                            tint = Color.White
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(
+                modifier = Modifier.height(28.dp)
+            )
 
-            // Full Name
+            // =================================================
+            // FULL NAME
+            // =================================================
+
             Text(
                 text = "Full Name",
                 fontSize = 14.sp,
@@ -199,7 +245,9 @@ fun EditProfileScreen(
                 color = Color(0xFF202035)
             )
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(
+                modifier = Modifier.height(6.dp)
+            )
 
             OutlinedTextField(
                 value = fullName,
@@ -214,9 +262,14 @@ fun EditProfileScreen(
                 }
             )
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(
+                modifier = Modifier.height(18.dp)
+            )
 
-            // Bio
+            // =================================================
+            // BIO
+            // =================================================
+
             Text(
                 text = "Bio",
                 fontSize = 14.sp,
@@ -224,7 +277,9 @@ fun EditProfileScreen(
                 color = Color(0xFF202035)
             )
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(
+                modifier = Modifier.height(6.dp)
+            )
 
             OutlinedTextField(
                 value = biography,
@@ -236,13 +291,20 @@ fun EditProfileScreen(
                     .height(120.dp),
                 shape = RoundedCornerShape(12.dp),
                 placeholder = {
-                    Text("Tell people a little about yourself")
+                    Text(
+                        "Tell people a little about yourself"
+                    )
                 }
             )
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(
+                modifier = Modifier.height(18.dp)
+            )
 
-            // City / Location
+            // =================================================
+            // LOCATION
+            // =================================================
+
             Text(
                 text = "City / Location",
                 fontSize = 14.sp,
@@ -250,7 +312,9 @@ fun EditProfileScreen(
                 color = Color(0xFF202035)
             )
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(
+                modifier = Modifier.height(6.dp)
+            )
 
             OutlinedTextField(
                 value = location,
@@ -265,9 +329,14 @@ fun EditProfileScreen(
                 }
             )
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(
+                modifier = Modifier.height(28.dp)
+            )
 
-            // Save button
+            // =================================================
+            // SAVE
+            // =================================================
+
             Button(
                 onClick = {
 
@@ -283,6 +352,7 @@ fun EditProfileScreen(
                                     .from("profiles")
                                     .update(
                                         buildJsonObject {
+
                                             put(
                                                 "full_name",
                                                 fullName.trim()
@@ -322,11 +392,15 @@ fun EditProfileScreen(
                         }
                     }
                 },
+
                 enabled = !isSaving,
+
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
+
                 shape = RoundedCornerShape(14.dp),
+
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFF7656E8)
                 )

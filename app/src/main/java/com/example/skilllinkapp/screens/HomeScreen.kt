@@ -1,7 +1,9 @@
 package com.example.skilllinkapp.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,20 +11,30 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.skilllinkapp.data.ProgressRepository
 import com.example.skilllinkapp.data.supabase
@@ -33,7 +45,6 @@ import com.example.skilllinkapp.ui.theme.SkillLinkNavy
 import com.example.skilllinkapp.ui.theme.SkillLinkPurple
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -43,8 +54,8 @@ import kotlinx.serialization.json.jsonPrimitive
 
 @Composable
 fun HomeScreen(
-    onCompleteProfile: () -> Unit,
     onGenerateRoadmap: () -> Unit,
+    onContinueLearning: () -> Unit,
     onLogout: () -> Unit,
     roadmapId: String = "",
     roadmapJson: String = ""
@@ -70,332 +81,617 @@ fun HomeScreen(
         mutableStateOf("")
     }
 
-    LaunchedEffect(Unit) {
+    var isLoading by remember {
+        mutableStateOf(true)
+    }
 
-        val user = supabase.auth.currentUserOrNull()
+    // =========================================================
+    // LOAD DASHBOARD DATA
+    // =========================================================
+
+    val user = supabase.auth.currentUserOrNull()
+
+    LaunchedEffect(
+        user?.id,
+        roadmapId,
+        roadmapJson
+    ) {
 
         if (user == null) {
+            isLoading = false
             return@LaunchedEffect
         }
 
+        isLoading = true
+        loadError = ""
+
         try {
 
-            /*
-             * Get the user's roadmaps from Supabase.
-             * Each row is treated as a JSON object so that
-             * we don't have to create a Kotlin data class
-             * for every column in the table.
-             */
+            // -------------------------------------------------
+            // If MainActivity already supplied a roadmap,
+            // use it immediately.
+            // -------------------------------------------------
+
+            if (
+                roadmapId.isNotBlank() &&
+                roadmapJson.isNotBlank()
+            ) {
+
+                currentRoadmapId = roadmapId
+
+                val suppliedRoadmap =
+                    parseRoadmapJson(roadmapJson)
+
+                roadmapTitle =
+                    suppliedRoadmap
+                        ?.get("title")
+                        ?.jsonPrimitive
+                        ?.content
+                        ?: "Your learning roadmap"
+
+                totalLessons =
+                    countLessons(suppliedRoadmap)
+
+                val progress =
+                    ProgressRepository.getProgress(
+                        roadmapId = roadmapId,
+                        userId = user.id
+                    )
+
+                completedLessons =
+                    progress.count {
+                        it.is_completed
+                    }
+
+                isLoading = false
+                return@LaunchedEffect
+            }
+
+            // -------------------------------------------------
+            // Otherwise load the user's latest roadmap
+            // from Supabase.
+            // -------------------------------------------------
+
             val roadmaps =
                 supabase
                     .from("roadmaps")
                     .select {
                         filter {
-                            eq("user_id", user.id)
+                            eq(
+                                "user_id",
+                                user.id
+                            )
                         }
                     }
                     .decodeList<JsonObject>()
 
             if (roadmaps.isEmpty()) {
 
-                roadmapTitle = "Start your learning journey"
                 currentRoadmapId = ""
+                roadmapTitle =
+                    "Start your learning journey"
+
                 completedLessons = 0
                 totalLessons = 0
+
+                isLoading = false
 
                 return@LaunchedEffect
             }
 
-            /*
-             * Use the most recently returned roadmap.
-             */
-            val latestRoadmap =
-                roadmaps.last()
+            // -------------------------------------------------
+            // Get the most recent roadmap.
+            //
+            // We compare created_at instead of assuming
+            // Supabase returned the rows in the correct order.
+            // -------------------------------------------------
 
-            /*
-             * Get the roadmap ID.
-             */
-            val roadmapIdElement =
-                latestRoadmap["roadmap_id"]
+            val latestRoadmap =
+                roadmaps.maxByOrNull {
+                    it["created_at"]
+                        ?.jsonPrimitive
+                        ?.content
+                        ?: ""
+                }
+                    ?: roadmaps.last()
 
             currentRoadmapId =
-                roadmapIdElement
+                latestRoadmap["roadmap_id"]
                     ?.jsonPrimitive
                     ?.content
                     ?: ""
 
-            /*
-             * Get the target skill.
-             */
-            val targetSkillElement =
-                latestRoadmap["target_skill"]
-
             roadmapTitle =
-                targetSkillElement
+                latestRoadmap["target_skill"]
                     ?.jsonPrimitive
                     ?.content
+                    ?.takeIf {
+                        it.isNotBlank()
+                    }
                     ?: "Your learning roadmap"
 
-            /*
-             * Get roadmap_data.
-             */
-            val roadmapDataElement: JsonElement? =
+            val roadmapDataElement =
                 latestRoadmap["roadmap_data"]
 
-            if (roadmapDataElement == null) {
-                throw Exception("roadmap_data was not found.")
-            }
-
-            /*
-             * Convert roadmap_data into a JsonObject.
-             *
-             * Supabase may return JSONB as either:
-             * 1. a JsonObject
-             * 2. a JSON string containing an object
-             */
-            val roadmapObject: JsonObject =
-                when (roadmapDataElement) {
-
-                    is JsonObject -> {
-                        roadmapDataElement
-                    }
-
-                    is JsonPrimitive -> {
-
-                        if (!roadmapDataElement.isString) {
-                            throw Exception(
-                                "roadmap_data is not a JSON string."
-                            )
-                        }
-
-                        Json.parseToJsonElement(
-                            roadmapDataElement.content
-                        ).jsonObject
-                    }
-
-                    else -> {
-                        throw Exception(
-                            "Unexpected roadmap_data format."
-                        )
-                    }
-                }
-
-            /*
-             * Get the weeks from the generated roadmap.
-             */
-            val weeks =
-                roadmapObject["weeks"]
-                    ?.jsonArray
-
-            /*
-             * Count all lessons.
-             *
-             * Each week contains:
-             * "lessons": ["Lesson 1", "Lesson 2", "Lesson 3"]
-             */
-            totalLessons =
-                weeks?.sumOf { weekElement ->
-
-                    weekElement
-                        .jsonObject["lessons"]
-                        ?.jsonArray
-                        ?.size
-                        ?: 0
-
-                } ?: 0
-
-            /*
-             * Load progress from Supabase.
-             */
-            val progress =
-                ProgressRepository.getProgress(
-                    roadmapId = currentRoadmapId,
-                    userId = user.id
+            val roadmapObject =
+                parseRoadmapElement(
+                    roadmapDataElement
                 )
 
-            /*
-             * Count only completed lessons.
-             */
-            completedLessons =
-                progress.count {
-                    it.is_completed
-                }
+            totalLessons =
+                countLessons(roadmapObject)
+
+            if (currentRoadmapId.isNotBlank()) {
+
+                val progress =
+                    ProgressRepository.getProgress(
+                        roadmapId = currentRoadmapId,
+                        userId = user.id
+                    )
+
+                completedLessons =
+                    progress.count {
+                        it.is_completed
+                    }
+
+            } else {
+
+                completedLessons = 0
+            }
 
         } catch (e: Exception) {
 
             loadError =
                 e.message
-                    ?: "Could not load roadmap."
+                    ?: "Could not load your dashboard."
 
             completedLessons = 0
             totalLessons = 0
+
+        } finally {
+
+            isLoading = false
         }
     }
 
-    /*
-     * Calculate progress percentage.
-     *
-     * Example:
-     * 1 completed lesson / 18 total lessons
-     * = 5%
-     */
+    // =========================================================
+    // PROGRESS
+    // =========================================================
+
     val progressPercentage =
         if (totalLessons > 0) {
-            completedLessons.toFloat() /
-                    totalLessons.toFloat()
+
+            (
+                    completedLessons.toFloat() /
+                            totalLessons.toFloat()
+                    ).coerceIn(0f, 1f)
+
         } else {
             0f
         }
 
-    val percentageText =
-        "${(progressPercentage * 100).toInt()}% complete"
+    val percentage =
+        (progressPercentage * 100).toInt()
+
+    val hasRoadmap =
+        currentRoadmapId.isNotBlank()
+
+    val roadmapCompleted =
+        hasRoadmap &&
+                totalLessons > 0 &&
+                completedLessons >= totalLessons
+
+    // =========================================================
+    // SCREEN
+    // =========================================================
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(SkillLinkBackground)
-            .padding(20.dp)
+            .verticalScroll(
+                rememberScrollState()
+            )
+            .padding(
+                horizontal = 20.dp,
+                vertical = 24.dp
+            )
     ) {
 
-        /*
-         * Temporary error message.
-         *
-         * We keep this visible while testing so that
-         * Supabase errors don't get hidden.
-         */
-        if (loadError.isNotBlank()) {
-
-            Text(
-                text = "Roadmap loading error: $loadError",
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(
-                    bottom = 8.dp
-                )
-            )
-        }
-
-        Text(
-            text = "Welcome back!",
-            style = MaterialTheme.typography.headlineMedium,
-            color = SkillLinkNavy
-        )
-
-        Text(
-            text = "Teach. Learn. Connect.",
-            style = MaterialTheme.typography.bodyLarge,
-            color = SkillLinkNavy,
-            modifier = Modifier.padding(top = 4.dp)
-        )
-
-        Spacer(
-            modifier = Modifier.height(24.dp)
-        )
-
-        Text(
-            text = "Recommended skills",
-            style = MaterialTheme.typography.titleLarge,
-            color = SkillLinkNavy
-        )
+        // =====================================================
+        // HEADER
+        // =====================================================
 
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 12.dp),
-            horizontalArrangement =
-                Arrangement.spacedBy(10.dp)
-        ) {
-
-            SkillCard("Python")
-            SkillCard("Kotlin")
-        }
-
-        Spacer(
-            modifier = Modifier.height(24.dp)
-        )
-
-        Text(
-            text = "Your current roadmap",
-            style = MaterialTheme.typography.titleLarge,
-            color = SkillLinkNavy
-        )
-
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 12.dp),
-            shape = RoundedCornerShape(16.dp),
-            color = SkillLinkCardBackground
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
 
             Column(
-                modifier = Modifier.padding(18.dp)
+                modifier = Modifier.weight(1f)
             ) {
 
                 Text(
-                    text = roadmapTitle,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = SkillLinkNavy
+                    text = "Welcome back!",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = SkillLinkNavy,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(
+                    modifier = Modifier.height(4.dp)
                 )
 
                 Text(
-                    text =
-                        if (currentRoadmapId.isNotBlank()) {
-                            "Continue working through your personalised roadmap."
-                        } else {
-                            "Create a personalised roadmap based on your target skill."
-                        },
+                    text = "Ready to learn something new?",
                     style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(top = 6.dp)
+                    color = Color(0xFF777277)
                 )
+            }
 
-                LinearProgressIndicator(
-                    progress = {
-                        progressPercentage
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 16.dp)
-                )
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(SkillLinkLightPurple),
+                contentAlignment = Alignment.Center
+            ) {
 
                 Text(
-                    text = percentageText,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(top = 6.dp)
+                    text = "S",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = SkillLinkPurple,
+                    fontWeight = FontWeight.Bold
                 )
-
-                Button(
-                    onClick = onGenerateRoadmap,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 16.dp)
-                ) {
-                    Text("Generate Roadmap")
-                }
             }
         }
 
         Spacer(
-            modifier = Modifier.height(24.dp)
+            modifier = Modifier.height(28.dp)
         )
 
-        Button(
-            onClick = onLogout,
-            modifier = Modifier.fillMaxWidth()
+        // =====================================================
+        // WELCOME CARD
+        // =====================================================
+
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            color = SkillLinkPurple
         ) {
-            Text("Log out")
+
+            Column(
+                modifier = Modifier.padding(22.dp)
+            ) {
+
+                Text(
+                    text = "Teach. Learn. Connect.",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(
+                    modifier = Modifier.height(8.dp)
+                )
+
+                Text(
+                    text = "Share what you know, discover new skills, and build your personalised learning journey.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(
+                        alpha = 0.9f
+                    )
+                )
+            }
         }
+
+        Spacer(
+            modifier = Modifier.height(28.dp)
+        )
+
+        // =====================================================
+        // RECOMMENDED SKILLS
+        // =====================================================
+
+        Text(
+            text = "Recommended skills",
+            style = MaterialTheme.typography.titleLarge,
+            color = SkillLinkNavy,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        Spacer(
+            modifier = Modifier.height(12.dp)
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+
+            SkillCard(
+                skillName = "Python",
+                description = "Programming",
+                modifier = Modifier.weight(1f),
+                onClick = onGenerateRoadmap
+            )
+
+            SkillCard(
+                skillName = "Kotlin",
+                description = "Android",
+                modifier = Modifier.weight(1f),
+                onClick = onGenerateRoadmap
+            )
+        }
+
+        Spacer(
+            modifier = Modifier.height(28.dp)
+        )
+
+        // =====================================================
+        // LEARNING JOURNEY HEADER
+        // =====================================================
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+
+            Text(
+                text = "Your learning journey",
+                style = MaterialTheme.typography.titleLarge,
+                color = SkillLinkNavy,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            if (hasRoadmap) {
+
+                Text(
+                    text = "$percentage%",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = SkillLinkPurple,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        Spacer(
+            modifier = Modifier.height(12.dp)
+        )
+
+        // =====================================================
+        // ROADMAP CARD
+        // =====================================================
+
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            color = SkillLinkCardBackground
+        ) {
+
+            Column(
+                modifier = Modifier.padding(20.dp)
+            ) {
+
+                if (isLoading) {
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(28.dp),
+                            color = SkillLinkPurple,
+                            strokeWidth = 3.dp
+                        )
+
+                        Spacer(
+                            modifier = Modifier.height(10.dp)
+                        )
+
+                        Text(
+                            text = "Loading your learning journey...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color(0xFF777277)
+                        )
+                    }
+
+                } else {
+
+                    // -------------------------------------------------
+                    // ROADMAP EXISTS
+                    // -------------------------------------------------
+
+                    if (hasRoadmap) {
+
+                        Text(
+                            text = roadmapTitle,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = SkillLinkNavy,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Spacer(
+                            modifier = Modifier.height(6.dp)
+                        )
+
+                        Text(
+                            text =
+                                if (roadmapCompleted) {
+                                    "You completed this roadmap. Keep building your skills or start a new one."
+                                } else {
+                                    "Continue working through your personalised learning roadmap."
+                                },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color(0xFF777277)
+                        )
+
+                        Spacer(
+                            modifier = Modifier.height(18.dp)
+                        )
+
+                        LinearProgressIndicator(
+                            progress = {
+                                progressPercentage
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .clip(
+                                    RoundedCornerShape(50.dp)
+                                ),
+                            color = SkillLinkPurple,
+                            trackColor = SkillLinkLightPurple
+                        )
+
+                        Spacer(
+                            modifier = Modifier.height(8.dp)
+                        )
+
+                        Text(
+                            text = "$completedLessons of $totalLessons lessons completed",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF777277)
+                        )
+
+                        Spacer(
+                            modifier = Modifier.height(18.dp)
+                        )
+
+                        Button(
+                            onClick = onContinueLearning,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = SkillLinkPurple
+                            )
+                        ) {
+
+                            Text(
+                                text =
+                                    if (roadmapCompleted) {
+                                        "View roadmap"
+                                    } else {
+                                        "Continue learning"
+                                    },
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+
+                        Spacer(
+                            modifier = Modifier.height(8.dp)
+                        )
+
+                        TextButton(
+                            onClick = onGenerateRoadmap,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+
+                            Text(
+                                text = "Create another roadmap",
+                                color = SkillLinkPurple
+                            )
+                        }
+
+                    } else {
+
+                        // -------------------------------------------------
+                        // NO ROADMAP
+                        // -------------------------------------------------
+
+                        Text(
+                            text = "Start your learning journey",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = SkillLinkNavy,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Spacer(
+                            modifier = Modifier.height(6.dp)
+                        )
+
+                        Text(
+                            text = "Tell SkillLink what you want to learn and create a personalised roadmap.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color(0xFF777277)
+                        )
+
+                        Spacer(
+                            modifier = Modifier.height(18.dp)
+                        )
+
+                        Button(
+                            onClick = onGenerateRoadmap,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = SkillLinkPurple
+                            )
+                        ) {
+
+                            Text(
+                                text = "Generate roadmap",
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // =====================================================
+        // ERROR
+        // =====================================================
+
+        if (loadError.isNotBlank()) {
+
+            Spacer(
+                modifier = Modifier.height(12.dp)
+            )
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                color = Color(0xFFFFF1F2)
+            ) {
+
+                Text(
+                    text = loadError,
+                    modifier = Modifier.padding(14.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+
+        Spacer(
+            modifier = Modifier.height(28.dp)
+        )
     }
 }
 
+
+// =============================================================
+// SKILL CARD
+// =============================================================
+
 @Composable
 private fun SkillCard(
-    skillName: String
+    skillName: String,
+    description: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
 ) {
 
     Surface(
-        modifier = Modifier.width(160.dp),
-        shape = RoundedCornerShape(14.dp),
+        modifier = modifier
+            .clickable {
+                onClick()
+            },
+        shape = RoundedCornerShape(16.dp),
         color = SkillLinkLightPurple
     ) {
 
@@ -403,18 +699,172 @@ private fun SkillCard(
             modifier = Modifier.padding(16.dp)
         ) {
 
-            Text(
-                text = skillName,
-                style = MaterialTheme.typography.titleMedium,
-                color = SkillLinkPurple
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(
+                        RoundedCornerShape(10.dp)
+                    )
+                    .background(Color.White),
+                contentAlignment = Alignment.Center
+            ) {
+
+                Text(
+                    text = skillName
+                        .first()
+                        .toString(),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = SkillLinkPurple,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(
+                modifier = Modifier.height(12.dp)
             )
 
             Text(
-                text = "Recommended",
-                style = MaterialTheme.typography.bodySmall,
+                text = skillName,
+                style = MaterialTheme.typography.titleMedium,
                 color = SkillLinkNavy,
-                modifier = Modifier.padding(top = 4.dp)
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Spacer(
+                modifier = Modifier.height(3.dp)
+            )
+
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFF777277)
             )
         }
+    }
+}
+
+
+// =============================================================
+// ROADMAP JSON PARSING
+// =============================================================
+
+private fun parseRoadmapElement(
+    element: JsonElement?
+): JsonObject? {
+
+    if (element == null) {
+        return null
+    }
+
+    return try {
+
+        when (element) {
+
+            is JsonObject -> {
+
+                val generated =
+                    element["generated_roadmap"]
+
+                if (generated != null) {
+
+                    when (generated) {
+
+                        is JsonObject ->
+                            generated
+
+                        is JsonPrimitive -> {
+
+                            if (generated.isString) {
+                                generated
+                                    .content
+                                    .let {
+                                        kotlinx.serialization.json
+                                            .Json
+                                            .parseToJsonElement(it)
+                                            .jsonObject
+                                    }
+                            } else {
+                                element
+                            }
+                        }
+
+                        else -> element
+                    }
+
+                } else {
+                    element
+                }
+            }
+
+            is JsonPrimitive -> {
+
+                if (!element.isString) {
+                    null
+                } else {
+
+                    val parsed =
+                        kotlinx.serialization.json
+                            .Json
+                            .parseToJsonElement(
+                                element.content
+                            )
+
+                    parseRoadmapElement(parsed)
+                }
+            }
+
+            else -> null
+        }
+
+    } catch (e: Exception) {
+
+        null
+    }
+}
+
+
+private fun parseRoadmapJson(
+    json: String
+): JsonObject? {
+
+    return try {
+
+        val element =
+            kotlinx.serialization.json
+                .Json
+                .parseToJsonElement(json)
+
+        parseRoadmapElement(element)
+
+    } catch (e: Exception) {
+
+        null
+    }
+}
+
+
+// =============================================================
+// COUNT LESSONS
+// =============================================================
+
+private fun countLessons(
+    roadmap: JsonObject?
+): Int {
+
+    if (roadmap == null) {
+        return 0
+    }
+
+    val weeks =
+        roadmap["weeks"]?.jsonArray
+            ?: return 0
+
+    return weeks.sumOf { weekElement ->
+
+        weekElement
+            .jsonObject["lessons"]
+            ?.jsonArray
+            ?.size
+            ?: 0
     }
 }

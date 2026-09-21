@@ -1,5 +1,7 @@
 package com.example.skilllinkapp.screens
 
+
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -15,9 +17,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -32,12 +37,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.skilllinkapp.data.ProgressRepository
 import com.example.skilllinkapp.data.supabase
-import com.example.skilllinkapp.ui.theme.SkillLinkBackground
-import com.example.skilllinkapp.ui.theme.SkillLinkLightPurple
 import com.example.skilllinkapp.ui.theme.SkillLinkNavy
 import com.example.skilllinkapp.ui.theme.SkillLinkPurple
 import io.github.jan.supabase.auth.auth
@@ -49,6 +54,15 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonPrimitive
+
+private val PageBackground = Color(0xFFF7F5FC)
+private val White = Color.White
+private val TextSecondary = Color(0xFF77737D)
+private val BorderColor = Color(0xFFE7E2EF)
+private val SoftPurple = Color(0xFFF0EAFF)
+private val SoftGreen = Color(0xFFEAF8F0)
+private val Green = Color(0xFF25855A)
+private val PurpleDark = Color(0xFF6941C6)
 
 @Composable
 fun MyLearningScreen(
@@ -82,11 +96,7 @@ fun MyLearningScreen(
 
     val scope = rememberCoroutineScope()
 
-    /*
-     * Load roadmaps whenever refreshKey changes.
-     */
     LaunchedEffect(refreshKey) {
-
         val user = supabase.auth.currentUserOrNull()
 
         if (user == null) {
@@ -99,11 +109,6 @@ fun MyLearningScreen(
         errorMessage = ""
 
         try {
-
-            /*
-             * Get all roadmaps belonging to the
-             * currently logged-in user.
-             */
             val userRoadmaps =
                 supabase
                     .from("roadmaps")
@@ -114,19 +119,6 @@ fun MyLearningScreen(
                     }
                     .decodeList<JsonObject>()
 
-            /*
-             * Keep roadmaps with valid roadmap data.
-             *
-             * parseRoadmapData() supports:
-             *
-             * 1. Normal roadmap JSON
-             *
-             * 2. {
-             *      "generated_roadmap": {...}
-             *    }
-             *
-             * 3. Double-encoded JSON
-             */
             roadmaps =
                 userRoadmaps
                     .filter { roadmap ->
@@ -136,11 +128,8 @@ fun MyLearningScreen(
                                 ?: return@filter false
 
                         try {
-
                             val roadmapObject =
-                                parseRoadmapData(
-                                    roadmapData
-                                )
+                                parseRoadmapData(roadmapData)
 
                             val title =
                                 roadmapObject["title"]
@@ -152,37 +141,16 @@ fun MyLearningScreen(
                             isProperRoadmapTitle(title)
 
                         } catch (_: Exception) {
-
                             false
                         }
                     }
-
-                    /*
-                     * IMPORTANT:
-                     *
-                     * Sort ONLY by created_at.
-                     *
-                     * This means:
-                     *
-                     * newest roadmap
-                     *        ↓
-                     * older roadmap
-                     *        ↓
-                     * oldest roadmap
-                     *
-                     * last_accessed does NOT affect the order.
-                     */
                     .sortedByDescending { roadmap ->
-
                         roadmap["created_at"]
                             ?.jsonPrimitive
                             ?.content
                             ?: ""
                     }
 
-            /*
-             * Load progress for each roadmap.
-             */
             val progressMap =
                 mutableMapOf<String, Pair<Int, Int>>()
 
@@ -199,14 +167,10 @@ fun MyLearningScreen(
                         ?: continue
 
                 val roadmapObject =
-                    parseRoadmapData(
-                        roadmapData
-                    )
+                    parseRoadmapData(roadmapData)
 
                 val totalLessons =
-                    countLessons(
-                        roadmapObject
-                    )
+                    countLessons(roadmapObject)
 
                 val progress =
                     ProgressRepository.getProgress(
@@ -227,7 +191,6 @@ fun MyLearningScreen(
             }
 
             roadmapProgress = progressMap
-
             isLoading = false
 
         } catch (e: Exception) {
@@ -240,13 +203,6 @@ fun MyLearningScreen(
         }
     }
 
-    /*
-     * Filter roadmaps into:
-     *
-     * In Progress
-     * OR
-     * Completed
-     */
     val displayedRoadmaps =
         roadmaps.filter { roadmap ->
 
@@ -276,40 +232,217 @@ fun MyLearningScreen(
             }
         }
 
+    val inProgressCount =
+        roadmaps.count { roadmap ->
+
+            val roadmapId =
+                roadmap["roadmap_id"]
+                    ?.jsonPrimitive
+                    ?.content
+                    ?: ""
+
+            val progress =
+                roadmapProgress[roadmapId]
+
+            val completed =
+                progress?.first ?: 0
+
+            val total =
+                progress?.second ?: 0
+
+            !(total > 0 && completed >= total)
+        }
+
+    val completedCount =
+        roadmaps.count { roadmap ->
+
+            val roadmapId =
+                roadmap["roadmap_id"]
+                    ?.jsonPrimitive
+                    ?.content
+                    ?: ""
+
+            val progress =
+                roadmapProgress[roadmapId]
+
+            val completed =
+                progress?.first ?: 0
+
+            val total =
+                progress?.second ?: 0
+
+            total > 0 && completed >= total
+        }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                SkillLinkBackground
-            )
-            .padding(
-                start = 22.dp,
-                top = 26.dp,
-                end = 22.dp,
-                bottom = 20.dp
-            )
+            .background(PageBackground)
     ) {
 
-        /*
-         * Header
-         */
+        // ---------------------------------------------------------
+        // HEADER
+        // ---------------------------------------------------------
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    start = 20.dp,
+                    end = 20.dp,
+                    top = 24.dp
+                )
+        ) {
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+                Box(
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(CircleShape)
+                        .background(SkillLinkPurple),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "S",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(
+                    modifier = Modifier.size(12.dp)
+                )
+
+                Column {
+                    Text(
+                        text = "My Learning",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = SkillLinkNavy,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Text(
+                        text = "Keep building your skills",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                }
+            }
+
+            Spacer(
+                modifier = Modifier.height(20.dp)
+            )
+
+            // -----------------------------------------------------
+            // SUMMARY CARD
+            // -----------------------------------------------------
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(22.dp),
+                color = SkillLinkPurple
+            ) {
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
+
+                        Text(
+                            text = "Your learning journey",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Spacer(
+                            modifier = Modifier.height(5.dp)
+                        )
+
+                        Text(
+                            text =
+                                if (roadmaps.isEmpty()) {
+                                    "Create your first roadmap and start learning."
+                                } else {
+                                    "${roadmaps.size} roadmap" +
+                                            if (roadmaps.size == 1) {
+                                                ""
+                                            } else {
+                                                "s"
+                                            } +
+                                            " in your library"
+                                },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.82f)
+                        )
+                    }
+
+                    Spacer(
+                        modifier = Modifier.size(14.dp)
+                    )
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+
+                        Text(
+                            text = "$completedCount",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Text(
+                            text = "completed",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White.copy(alpha = 0.78f)
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(
+            modifier = Modifier.height(20.dp)
+        )
+
+        // ---------------------------------------------------------
+        // FILTERS
+        // ---------------------------------------------------------
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(38.dp),
-            verticalAlignment =
-                Alignment.CenterVertically
+                .padding(horizontal = 20.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
 
-            SkillLinkLogo()
+            LearningFilter(
+                text = "In Progress",
+                count = inProgressCount,
+                selected = !showCompleted,
+                onClick = {
+                    showCompleted = false
+                }
+            )
 
-            Text(
-                text = "My Learning",
-                style =
-                    MaterialTheme.typography.titleLarge,
-                color = SkillLinkNavy,
-                modifier =
-                    Modifier.padding(start = 12.dp)
+            LearningFilter(
+                text = "Completed",
+                count = completedCount,
+                selected = showCompleted,
+                onClick = {
+                    showCompleted = true
+                }
             )
         }
 
@@ -317,326 +450,258 @@ fun MyLearningScreen(
             modifier = Modifier.height(20.dp)
         )
 
-        /*
-         * Filter buttons
-         */
-        Row(
-            horizontalArrangement =
-                Arrangement.spacedBy(8.dp)
+        // ---------------------------------------------------------
+        // CONTENT
+        // ---------------------------------------------------------
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .weight(1f)
         ) {
 
-            Surface(
-                modifier =
-                    Modifier.clickable {
-                        showCompleted = false
-                    },
-                shape =
-                    RoundedCornerShape(20.dp),
-                color =
-                    if (!showCompleted) {
-                        SkillLinkPurple
-                    } else {
-                        Color.White
-                    }
-            ) {
+            when {
 
-                Text(
-                    text = "In Progress",
-                    color =
-                        if (!showCompleted) {
-                            Color.White
-                        } else {
-                            Color(0xFF838095)
-                        },
-                    style =
-                        MaterialTheme.typography.bodySmall,
-                    modifier =
-                        Modifier.padding(
-                            horizontal = 14.dp,
-                            vertical = 8.dp
+                isLoading -> {
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(top = 50.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+
+                        CircularProgressIndicator(
+                            color = SkillLinkPurple,
+                            strokeWidth = 3.dp
                         )
-                )
-            }
 
-            Surface(
-                modifier =
-                    Modifier.clickable {
-                        showCompleted = true
-                    },
-                shape =
-                    RoundedCornerShape(20.dp),
-                color =
-                    if (showCompleted) {
-                        SkillLinkPurple
-                    } else {
-                        Color.White
-                    }
-            ) {
-
-                Text(
-                    text = "Completed",
-                    color =
-                        if (showCompleted) {
-                            Color.White
-                        } else {
-                            Color(0xFF838095)
-                        },
-                    style =
-                        MaterialTheme.typography.bodySmall,
-                    modifier =
-                        Modifier.padding(
-                            horizontal = 14.dp,
-                            vertical = 8.dp
+                        Spacer(
+                            modifier = Modifier.height(14.dp)
                         )
-                )
-            }
-        }
 
-        Spacer(
-            modifier = Modifier.height(28.dp)
-        )
+                        Text(
+                            text = "Loading your roadmaps...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextSecondary
+                        )
+                    }
+                }
 
-        Text(
-            text =
-                if (showCompleted) {
-                    "Completed"
-                } else {
-                    "In progress"
-                },
-            style =
-                MaterialTheme.typography.titleMedium,
-            color = SkillLinkNavy
-        )
+                errorMessage.isNotBlank() -> {
 
-        Spacer(
-            modifier = Modifier.height(10.dp)
-        )
-
-        /*
-         * Loading state
-         */
-        if (isLoading) {
-
-            Text(
-                text = "Loading your roadmaps...",
-                color = SkillLinkNavy
-            )
-
-            /*
-             * Error state
-             */
-        } else if (errorMessage.isNotBlank()) {
-
-            Text(
-                text = errorMessage,
-                color =
-                    MaterialTheme.colorScheme.error,
-                style =
-                    MaterialTheme.typography.bodySmall
-            )
-
-            /*
-             * Empty state
-             */
-        } else if (displayedRoadmaps.isEmpty()) {
-
-            Surface(
-                modifier =
-                    Modifier.fillMaxWidth(),
-                shape =
-                    RoundedCornerShape(15.dp),
-                color = Color.White,
-                border =
-                    BorderStroke(
-                        1.dp,
-                        Color(0xFFECEBF3)
+                    EmptyLearningState(
+                        title = "Something went wrong",
+                        description = errorMessage,
+                        buttonText = "Try again",
+                        onButtonClick = {
+                            // Trigger another load through
+                            // the existing refresh mechanism.
+                            errorMessage = ""
+                            isLoading = true
+                        }
                     )
-            ) {
+                }
 
-                Column(
-                    modifier =
-                        Modifier.padding(18.dp)
-                ) {
+                displayedRoadmaps.isEmpty() -> {
 
-                    Text(
-                        text =
+                    EmptyLearningState(
+                        title =
                             if (showCompleted) {
                                 "No completed roadmaps"
                             } else {
                                 "No roadmaps yet"
                             },
-                        style =
-                            MaterialTheme.typography.titleMedium,
-                        color = SkillLinkNavy
+                        description =
+                            if (showCompleted) {
+                                "Complete a roadmap and it will appear here."
+                            } else {
+                                "Create a personalised roadmap and start your learning journey."
+                            },
+                        buttonText =
+                            if (showCompleted) {
+                                "View In Progress"
+                            } else {
+                                "Generate Roadmap"
+                            },
+                        onButtonClick = {
+
+                            if (showCompleted) {
+                                showCompleted = false
+                            } else {
+                                onGenerateRoadmap()
+                            }
+                        }
                     )
+                }
 
-                    if (!showCompleted) {
+                else -> {
 
-                        Text(
-                            text =
-                                "Generate a personalised roadmap to start learning.",
-                            style =
-                                MaterialTheme.typography.bodySmall,
-                            color =
-                                Color(0xFF85849A),
-                            modifier =
-                                Modifier.padding(top = 6.dp)
-                        )
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding =
+                            androidx.compose.foundation.layout.PaddingValues(
+                                start = 20.dp,
+                                end = 20.dp,
+                                bottom = 28.dp
+                            ),
+                        verticalArrangement =
+                            Arrangement.spacedBy(12.dp)
+                    ) {
 
-                        Button(
-                            onClick =
-                                onGenerateRoadmap,
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 14.dp)
-                        ) {
+                        item {
 
                             Text(
-                                text = "Generate Roadmap"
+                                text =
+                                    if (showCompleted) {
+                                        "Completed roadmaps"
+                                    } else {
+                                        "Continue learning"
+                                    },
+                                style =
+                                    MaterialTheme.typography.titleLarge,
+                                color = SkillLinkNavy,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Spacer(
+                                modifier = Modifier.height(4.dp)
+                            )
+
+                            Text(
+                                text =
+                                    if (showCompleted) {
+                                        "Your finished learning journeys."
+                                    } else {
+                                        "Pick up where you left off."
+                                    },
+                                style =
+                                    MaterialTheme.typography.bodySmall,
+                                color = TextSecondary
+                            )
+
+                            Spacer(
+                                modifier = Modifier.height(8.dp)
+                            )
+                        }
+
+                        items(
+                            items = displayedRoadmaps
+                        ) { roadmap ->
+
+                            val roadmapId =
+                                roadmap["roadmap_id"]
+                                    ?.jsonPrimitive
+                                    ?.content
+                                    ?: return@items
+
+                            val roadmapData =
+                                roadmap["roadmap_data"]
+                                    ?: return@items
+
+                            val roadmapObject =
+                                try {
+                                    parseRoadmapData(
+                                        roadmapData
+                                    )
+                                } catch (_: Exception) {
+                                    null
+                                } ?: return@items
+
+                            val title =
+                                roadmapObject["title"]
+                                    ?.jsonPrimitive
+                                    ?.content
+                                    ?.trim()
+                                    ?: return@items
+
+                            val summary =
+                                roadmapObject["summary"]
+                                    ?.jsonPrimitive
+                                    ?.content
+                                    ?.trim()
+                                    ?: ""
+
+                            val progress =
+                                roadmapProgress[roadmapId]
+
+                            val completed =
+                                progress?.first ?: 0
+
+                            val total =
+                                progress?.second ?: 0
+
+                            val percentage =
+                                if (total > 0) {
+                                    completed.toFloat() /
+                                            total.toFloat()
+                                } else {
+                                    0f
+                                }
+
+                            val lastAccessed =
+                                roadmap["last_accessed"]
+                                    ?.jsonPrimitive
+                                    ?.content
+                                    ?: ""
+
+                            RoadmapCard(
+                                title = title,
+                                summary = summary,
+                                completed = completed,
+                                total = total,
+                                percentage = percentage,
+                                lastAccessed = lastAccessed,
+                                completedRoadmap =
+                                    total > 0 &&
+                                            completed >= total,
+                                onClick = {
+
+                                    val currentUser =
+                                        supabase.auth
+                                            .currentUserOrNull()
+
+                                    if (currentUser != null) {
+
+                                        scope.launch {
+
+                                            try {
+
+                                                ProgressRepository
+                                                    .updateLastAccessed(
+                                                        roadmapId =
+                                                            roadmapId,
+                                                        userId =
+                                                            currentUser.id
+                                                    )
+
+                                            } catch (_: Exception) {
+                                                // Opening the roadmap
+                                                // should still work.
+                                            }
+                                        }
+                                    }
+
+                                    onOpenRoadmap(
+                                        roadmapId,
+                                        roadmapObject.toString()
+                                    )
+                                },
+                                onDelete = {
+                                    roadmapToDelete = roadmap
+                                }
                             )
                         }
                     }
                 }
             }
-
-            /*
-             * Roadmap list
-             */
-        } else {
-
-            LazyColumn(
-                modifier =
-                    Modifier.fillMaxSize(),
-                verticalArrangement =
-                    Arrangement.spacedBy(9.dp)
-            ) {
-
-                items(
-                    items = displayedRoadmaps
-                ) { roadmap ->
-
-                    val roadmapId =
-                        roadmap["roadmap_id"]
-                            ?.jsonPrimitive
-                            ?.content
-                            ?: return@items
-
-                    val roadmapData =
-                        roadmap["roadmap_data"]
-                            ?: return@items
-
-                    val roadmapObject =
-                        try {
-
-                            parseRoadmapData(
-                                roadmapData
-                            )
-
-                        } catch (_: Exception) {
-
-                            null
-                        }
-                            ?: return@items
-
-                    val title =
-                        roadmapObject["title"]
-                            ?.jsonPrimitive
-                            ?.content
-                            ?.trim()
-                            ?: return@items
-
-                    val progress =
-                        roadmapProgress[roadmapId]
-
-                    val completed =
-                        progress?.first ?: 0
-
-                    val total =
-                        progress?.second ?: 0
-
-                    val percentage =
-                        if (total > 0) {
-                            completed.toFloat() /
-                                    total.toFloat()
-                        } else {
-                            0f
-                        }
-
-                    val percentageText =
-                        "${(percentage * 100).toInt()}%"
-
-                    val lastAccessed =
-                        roadmap["last_accessed"]
-                            ?.jsonPrimitive
-                            ?.content
-                            ?: ""
-
-                    RoadmapLearningRow(
-                        title = title,
-                        completed = completed,
-                        total = total,
-                        percentage = percentage,
-                        percentageText =
-                            percentageText,
-                        lastAccessed =
-                            lastAccessed,
-
-                        /*
-                         * Open roadmap
-                         */
-                        onClick = {
-
-                            val currentUser =
-                                supabase.auth
-                                    .currentUserOrNull()
-
-                            if (currentUser != null) {
-
-                                scope.launch {
-
-                                    try {
-
-                                        ProgressRepository
-                                            .updateLastAccessed(
-                                                roadmapId =
-                                                    roadmapId,
-                                                userId =
-                                                    currentUser.id
-                                            )
-
-                                    } catch (_: Exception) {
-                                        // Do not prevent opening
-                                    }
-                                }
-                            }
-
-                            /*
-                             * Open roadmap using
-                             * the normalised JSON.
-                             */
-                            onOpenRoadmap(
-                                roadmapId,
-                                roadmapObject.toString()
-                            )
-                        },
-
-                        /*
-                         * Delete roadmap
-                         */
-                        onDelete = {
-                            roadmapToDelete =
-                                roadmap
-                        }
-                    )
-                }
-            }
         }
     }
 
-    /*
-     * Delete confirmation dialog
-     */
+    // -------------------------------------------------------------
+    // DELETE DIALOG
+    // -------------------------------------------------------------
+
     if (roadmapToDelete != null) {
 
         val selectedRoadmap =
@@ -656,7 +721,6 @@ fun MyLearningScreen(
                     ?: "this roadmap"
 
             } catch (_: Exception) {
-
                 "this roadmap"
             }
 
@@ -667,7 +731,9 @@ fun MyLearningScreen(
 
             title = {
                 Text(
-                    text = "Delete roadmap?"
+                    text = "Delete roadmap?",
+                    color = SkillLinkNavy,
+                    fontWeight = FontWeight.Bold
                 )
             },
 
@@ -707,13 +773,9 @@ fun MyLearningScreen(
 
                                 try {
 
-                                    /*
-                                     * Delete roadmap from Supabase.
-                                     */
                                     supabase
                                         .from("roadmaps")
                                         .delete {
-
                                             filter {
 
                                                 eq(
@@ -728,23 +790,14 @@ fun MyLearningScreen(
                                             }
                                         }
 
-                                    /*
-                                     * Remove it from the
-                                     * local list immediately.
-                                     */
                                     roadmaps =
                                         roadmaps.filterNot {
-
                                             it["roadmap_id"]
                                                 ?.jsonPrimitive
                                                 ?.content ==
                                                     roadmapId
                                         }
 
-                                    /*
-                                     * Remove its progress
-                                     * from the local map.
-                                     */
                                     roadmapProgress =
                                         roadmapProgress
                                             .toMutableMap()
@@ -754,8 +807,7 @@ fun MyLearningScreen(
                                                 )
                                             }
 
-                                    roadmapToDelete =
-                                        null
+                                    roadmapToDelete = null
 
                                 } catch (e: Exception) {
 
@@ -763,18 +815,15 @@ fun MyLearningScreen(
                                         e.message
                                             ?: "Could not delete roadmap."
 
-                                    roadmapToDelete =
-                                        null
+                                    roadmapToDelete = null
                                 }
                             }
                         }
                     }
                 ) {
-
                     Text(
                         text = "Delete",
-                        color =
-                            MaterialTheme.colorScheme.error
+                        color = MaterialTheme.colorScheme.error
                     )
                 }
             },
@@ -786,297 +835,417 @@ fun MyLearningScreen(
                         roadmapToDelete = null
                     }
                 ) {
-
-                    Text(
-                        text = "Cancel"
-                    )
+                    Text("Cancel")
                 }
             }
         )
     }
 }
 
-
-/*
- * Individual roadmap row.
- */
 @Composable
-private fun RoadmapLearningRow(
+private fun LearningFilter(
+    text: String,
+    count: Int,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.height(42.dp),
+        shape = RoundedCornerShape(13.dp),
+        color = if (selected) {
+            SkillLinkPurple
+        } else {
+            White
+        },
+        border = if (!selected) {
+            BorderStroke(
+                1.dp,
+                BorderColor
+            )
+        } else {
+            null
+        }
+    ) {
+
+        Row(
+            modifier = Modifier.padding(
+                horizontal = 14.dp
+            ),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelLarge,
+                color = if (selected) {
+                    Color.White
+                } else {
+                    SkillLinkNavy
+                },
+                fontWeight = if (selected) {
+                    FontWeight.Bold
+                } else {
+                    FontWeight.Medium
+                }
+            )
+
+            Spacer(
+                modifier = Modifier.width(7.dp)
+            )
+
+            Box(
+                modifier = Modifier
+                    .size(22.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (selected) {
+                            Color.White.copy(alpha = 0.18f)
+                        } else {
+                            SoftPurple
+                        }
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = count.toString(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (selected) {
+                        Color.White
+                    } else {
+                        PurpleDark
+                    },
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RoadmapCard(
     title: String,
+    summary: String,
     completed: Int,
     total: Int,
     percentage: Float,
-    percentageText: String,
     lastAccessed: String,
+    completedRoadmap: Boolean,
     onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
-
     Surface(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(
-                    onClick = onClick
-                ),
-        shape =
-            RoundedCornerShape(15.dp),
-        color = Color.White,
-        border =
-            BorderStroke(
-                1.dp,
-                Color(0xFFECEBF3)
-            )
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(20.dp),
+        color = White,
+        shadowElevation = 1.dp
     ) {
 
-        Row(
-            modifier =
-                Modifier.padding(
-                    horizontal = 12.dp,
-                    vertical = 12.dp
-                ),
-            verticalAlignment =
-                Alignment.CenterVertically
+        Column(
+            modifier = Modifier.padding(18.dp)
         ) {
 
-            /*
-             * Roadmap icon.
-             */
-            Surface(
-                modifier =
-                    Modifier.size(36.dp),
-                shape =
-                    RoundedCornerShape(11.dp),
-                color =
-                    SkillLinkLightPurple
+            Row(
+                verticalAlignment = Alignment.Top
             ) {
 
                 Box(
-                    contentAlignment =
-                        Alignment.Center
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(
+                            if (completedRoadmap) {
+                                SoftGreen
+                            } else {
+                                SoftPurple
+                            }
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (completedRoadmap) {
+                            "✓"
+                        } else {
+                            "S"
+                        },
+                        style = MaterialTheme.typography.titleMedium,
+                        color = if (completedRoadmap) {
+                            Green
+                        } else {
+                            SkillLinkPurple
+                        },
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(
+                    modifier = Modifier.width(12.dp)
+                )
+
+                Column(
+                    modifier = Modifier.weight(1f)
                 ) {
 
                     Text(
-                        text = "⌘",
-                        color =
-                            SkillLinkPurple,
-                        style =
-                            MaterialTheme.typography
-                                .titleMedium
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = SkillLinkNavy,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2
+                    )
+
+                    if (summary.isNotBlank()) {
+
+                        Spacer(
+                            modifier = Modifier.height(5.dp)
+                        )
+
+                        Text(
+                            text = summary,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary,
+                            maxLines = 2
+                        )
+                    }
+                }
+
+                TextButton(
+                    onClick = onDelete,
+                    modifier = Modifier.size(42.dp)
+                ) {
+                    Text(
+                        text = "⋮",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = TextSecondary
                     )
                 }
             }
 
             Spacer(
-                modifier =
-                    Modifier.size(12.dp)
+                modifier = Modifier.height(18.dp)
             )
 
-            /*
-             * Roadmap information.
-             */
-            Column(
-                modifier =
-                    Modifier.weight(1f)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
 
                 Text(
-                    text = title,
-                    style =
-                        MaterialTheme.typography
-                            .bodyMedium,
-                    color = SkillLinkNavy,
-                    maxLines = 1
-                )
-
-                Spacer(
-                    modifier =
-                        Modifier.height(7.dp)
-                )
-
-                /*
-                 * Progress bar.
-                 */
-                LinearProgressIndicator(
-                    progress = {
-                        percentage
+                    text = if (completedRoadmap) {
+                        "Completed"
+                    } else {
+                        "Progress"
                     },
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .height(6.dp),
-                    color =
-                        SkillLinkPurple,
-                    trackColor =
-                        Color(0xFFECEAF2)
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (completedRoadmap) {
+                        Green
+                    } else {
+                        SkillLinkNavy
+                    },
+                    fontWeight = FontWeight.SemiBold
                 )
 
                 Spacer(
-                    modifier =
-                        Modifier.height(5.dp)
+                    modifier = Modifier.weight(1f)
                 )
 
-                /*
-                 * Percentage,
-                 * completed topics,
-                 * last accessed.
-                 */
                 Text(
-                    text =
-                        buildProgressText(
-                            percentageText =
-                                percentageText,
-                            completed =
-                                completed,
-                            total =
-                                total,
-                            lastAccessed =
-                                lastAccessed
-                        ),
-                    style =
-                        MaterialTheme.typography
-                            .bodySmall,
-                    color =
-                        Color(0xFF9A98A8),
-                    maxLines = 1
+                    text = "${(percentage * 100).toInt()}%",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (completedRoadmap) {
+                        Green
+                    } else {
+                        SkillLinkPurple
+                    },
+                    fontWeight = FontWeight.Bold
                 )
             }
 
             Spacer(
-                modifier =
-                    Modifier.size(4.dp)
+                modifier = Modifier.height(8.dp)
             )
 
-            /*
-             * Delete button.
-             */
-            TextButton(
-                onClick = onDelete,
-                modifier =
-                    Modifier.size(40.dp)
+            LinearProgressIndicator(
+                progress = {
+                    percentage.coerceIn(0f, 1f)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(20.dp)),
+                color = if (completedRoadmap) {
+                    Green
+                } else {
+                    SkillLinkPurple
+                },
+                trackColor = if (completedRoadmap) {
+                    Color(0xFFDDF0E5)
+                } else {
+                    Color(0xFFECEAF2)
+                }
+            )
+
+            Spacer(
+                modifier = Modifier.height(9.dp)
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
 
                 Text(
-                    text = "⋮",
-                    style =
-                        MaterialTheme.typography
-                            .headlineSmall,
-                    color =
-                        Color(0xFF9A98A8)
+                    text = "$completed of $total lessons",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary
                 )
+
+                Spacer(
+                    modifier = Modifier.weight(1f)
+                )
+
+                if (lastAccessed.isNotBlank()) {
+
+                    Text(
+                        text = formatLastAccessed(lastAccessed),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary,
+                        maxLines = 1
+                    )
+                }
+            }
+
+            Spacer(
+                modifier = Modifier.height(14.dp)
+            )
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                color = if (completedRoadmap) {
+                    SoftGreen
+                } else {
+                    SoftPurple
+                }
+            ) {
+                Row(
+                    modifier = Modifier.padding(
+                        horizontal = 14.dp,
+                        vertical = 11.dp
+                    ),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+
+                    Text(
+                        text = if (completedRoadmap) {
+                            "✓  Roadmap completed"
+                        } else {
+                            "Continue learning  →"
+                        },
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (completedRoadmap) {
+                            Green
+                        } else {
+                            PurpleDark
+                        },
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
         }
     }
 }
 
-
-/*
- * SkillLink logo.
- */
 @Composable
-private fun SkillLinkLogo() {
-
-    Row(
-        verticalAlignment =
-            Alignment.CenterVertically
+private fun EmptyLearningState(
+    title: String,
+    description: String,
+    buttonText: String,
+    onButtonClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(
+                horizontal = 30.dp,
+                vertical = 35.dp
+            ),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-        Row(
-            horizontalArrangement =
-                Arrangement.spacedBy(2.dp),
-            verticalAlignment =
-                Alignment.CenterVertically
+        Box(
+            modifier = Modifier
+                .size(78.dp)
+                .clip(CircleShape)
+                .background(SoftPurple),
+            contentAlignment = Alignment.Center
         ) {
-
-            Surface(
-                modifier =
-                    Modifier.size(
-                        width = 5.dp,
-                        height = 15.dp
-                    ),
-                shape =
-                    RoundedCornerShape(4.dp),
-                color =
-                    SkillLinkPurple
-            ) {}
-
-            Surface(
-                modifier =
-                    Modifier.size(
-                        width = 5.dp,
-                        height = 19.dp
-                    ),
-                shape =
-                    RoundedCornerShape(4.dp),
-                color =
-                    Color(0xFFA18AEF)
-            ) {}
-
-            Surface(
-                modifier =
-                    Modifier.size(
-                        width = 5.dp,
-                        height = 15.dp
-                    ),
-                shape =
-                    RoundedCornerShape(4.dp),
-                color =
-                    Color(0xFFD0C4FF)
-            ) {}
+            Text(
+                text = "S",
+                style = MaterialTheme.typography.headlineMedium,
+                color = SkillLinkPurple,
+                fontWeight = FontWeight.Bold
+            )
         }
 
-        Text(
-            text = "SkillLink",
-            style =
-                MaterialTheme.typography.titleMedium,
-            color = SkillLinkNavy,
-            modifier =
-                Modifier.padding(start = 7.dp)
+        Spacer(
+            modifier = Modifier.height(18.dp)
         )
+
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLarge,
+            color = SkillLinkNavy,
+            fontWeight = FontWeight.Bold
+        )
+
+        Spacer(
+            modifier = Modifier.height(7.dp)
+        )
+
+        Text(
+            text = description,
+            style = MaterialTheme.typography.bodyMedium,
+            color = TextSecondary,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
+
+        Spacer(
+            modifier = Modifier.height(20.dp)
+        )
+
+        Button(
+            onClick = onButtonClick,
+            shape = RoundedCornerShape(14.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = SkillLinkPurple
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp)
+        ) {
+            Text(
+                text = buttonText,
+                fontWeight = FontWeight.Bold
+            )
+        }
     }
 }
 
-
-/*
- * Convert roadmap_data into the normal roadmap object.
- *
- * Supports:
- *
- * {
- *     "title": "...",
- *     "summary": "...",
- *     "weeks": [...]
- * }
- *
- * AND:
- *
- * {
- *     "generated_roadmap": {
- *         "title": "...",
- *         "summary": "...",
- *         "weeks": [...]
- *     }
- * }
- *
- * AND JSON stored as a string.
- */
 private fun parseRoadmapData(
     element: JsonElement
 ): JsonObject {
 
-    var current =
-        element
+    var current = element
 
-    /*
-     * Unwrap JSON strings.
-     */
     repeat(4) {
-
         if (
             current is JsonPrimitive &&
             current.isString
         ) {
-
             current =
                 Json.parseToJsonElement(
                     current.content
@@ -1084,39 +1253,24 @@ private fun parseRoadmapData(
         }
     }
 
-    /*
-     * The result must be an object.
-     */
     val objectData =
         current as? JsonObject
             ?: throw Exception(
                 "roadmap_data could not be converted into a JSON object."
             )
 
-    /*
-     * Handle:
-     *
-     * "generated_roadmap": {...}
-     */
     val generatedRoadmap =
         objectData["generated_roadmap"]
 
     if (generatedRoadmap != null) {
 
-        var inner =
-            generatedRoadmap
+        var inner = generatedRoadmap
 
-        /*
-         * generated_roadmap might itself
-         * be a JSON string.
-         */
         repeat(4) {
-
             if (
                 inner is JsonPrimitive &&
                 inner.isString
             ) {
-
                 inner =
                     Json.parseToJsonElement(
                         inner.content
@@ -1130,16 +1284,9 @@ private fun parseRoadmapData(
             )
     }
 
-    /*
-     * Already in normal format.
-     */
     return objectData
 }
 
-
-/*
- * Count lessons across all weeks.
- */
 private fun countLessons(
     roadmap: JsonObject
 ): Int {
@@ -1162,10 +1309,6 @@ private fun countLessons(
     }
 }
 
-
-/*
- * Remove generic roadmap titles.
- */
 private fun isProperRoadmapTitle(
     title: String
 ): Boolean {
@@ -1192,36 +1335,6 @@ private fun isProperRoadmapTitle(
     return cleaned !in invalidTitles
 }
 
-
-/*
- * Build the progress information.
- */
-private fun buildProgressText(
-    percentageText: String,
-    completed: Int,
-    total: Int,
-    lastAccessed: String
-): String {
-
-    val topicsText =
-        "$completed of $total topics"
-
-    val accessedText =
-        if (lastAccessed.isBlank()) {
-            "Not accessed yet"
-        } else {
-            formatLastAccessed(
-                lastAccessed
-            )
-        }
-
-    return "$percentageText · $topicsText · $accessedText"
-}
-
-
-/*
- * Format the Supabase timestamp.
- */
 private fun formatLastAccessed(
     timestamp: String
 ): String {
@@ -1229,9 +1342,7 @@ private fun formatLastAccessed(
     return try {
 
         val instant =
-            java.time.Instant.parse(
-                timestamp
-            )
+            java.time.Instant.parse(timestamp)
 
         val zone =
             java.time.ZoneId.systemDefault()
@@ -1250,29 +1361,24 @@ private fun formatLastAccessed(
         when (localDate) {
 
             today ->
-                "Last accessed today"
+                "Today"
 
             yesterday ->
-                "Last accessed yesterday"
+                "Yesterday"
 
             else -> {
 
                 val formatter =
                     java.time.format.DateTimeFormatter
-                        .ofPattern(
-                            "dd MMM yyyy, HH:mm"
-                        )
+                        .ofPattern("dd MMM")
 
-                "Last accessed ${
-                    formatter.format(
-                        instant.atZone(zone)
-                    )
-                }"
+                formatter.format(
+                    instant.atZone(zone)
+                )
             }
         }
 
     } catch (_: Exception) {
-
-        "Last accessed $timestamp"
+        ""
     }
 }

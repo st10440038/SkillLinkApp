@@ -2,27 +2,35 @@ package com.example.skilllinkapp
 
 import android.content.Intent
 import android.os.Bundle
+
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
+
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+
 import androidx.compose.ui.Modifier
+
 import com.example.skilllinkapp.data.supabase
 import com.example.skilllinkapp.screens.EditProfileScreen
 import com.example.skilllinkapp.screens.GenerateRoadmapScreen
@@ -30,16 +38,17 @@ import com.example.skilllinkapp.screens.HomeScreen
 import com.example.skilllinkapp.screens.LoginScreen
 import com.example.skilllinkapp.screens.MyLearningScreen
 import com.example.skilllinkapp.screens.ProfileScreen
-import com.example.skilllinkapp.screens.ProfileSetupScreen
 import com.example.skilllinkapp.screens.RegisterScreen
 import com.example.skilllinkapp.screens.RoadmapScreen
 import com.example.skilllinkapp.screens.SettingsScreen
-import com.example.skilllinkapp.screens.SkillsKnownScreen
-import com.example.skilllinkapp.screens.SkillsToLearnScreen
+
 import com.example.skilllinkapp.ui.theme.SkillLinkAppTheme
+
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.handleDeeplinks
+
 import kotlinx.coroutines.launch
+
 
 class MainActivity : ComponentActivity() {
 
@@ -62,16 +71,16 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+
 @Composable
 fun SkillLinkApp() {
 
     val scope = rememberCoroutineScope()
 
-    /*
-     * ------------------------------------------------
-     * LOGIN STATE
-     * ------------------------------------------------
-     */
+
+    // =========================================================
+    // LOGIN
+    // =========================================================
 
     var isLoggedIn by remember {
         mutableStateOf(false)
@@ -81,45 +90,19 @@ fun SkillLinkApp() {
         mutableStateOf(true)
     }
 
-    /*
-     * ------------------------------------------------
-     * PROFILE SETUP
-     * ------------------------------------------------
-     */
 
-    var showProfileSetup by remember {
-        mutableStateOf(false)
-    }
-
-    var profileSetupStep by remember {
-        mutableStateOf(1)
-    }
-
-    /*
-     * ------------------------------------------------
-     * MAIN NAVIGATION
-     * ------------------------------------------------
-     */
+    // =========================================================
+    // MAIN NAVIGATION
+    // =========================================================
 
     var selectedPage by remember {
         mutableStateOf("home")
     }
 
-    /*
-     * ------------------------------------------------
-     * PROFILE
-     * ------------------------------------------------
-     */
 
-    var showEditProfile by remember {
-        mutableStateOf(false)
-    }
-
-    /*
-     * ------------------------------------------------
-     * ROADMAP
-     * ------------------------------------------------
-     */
+    // =========================================================
+    // ROADMAP
+    // =========================================================
 
     var showGenerateRoadmap by remember {
         mutableStateOf(false)
@@ -133,21 +116,109 @@ fun SkillLinkApp() {
         mutableStateOf("")
     }
 
-    /*
-     * ------------------------------------------------
-     * MY LEARNING REFRESH
-     * ------------------------------------------------
-     */
+
+    // =========================================================
+    // MY LEARNING
+    // =========================================================
 
     var myLearningRefreshKey by remember {
         mutableStateOf(0)
     }
 
-    /*
-     * ------------------------------------------------
-     * NOT LOGGED IN
-     * ------------------------------------------------
-     */
+
+    // =========================================================
+    // ANDROID SYSTEM BACK BUTTON
+    // =========================================================
+
+    BackHandler(
+        enabled = isLoggedIn
+    ) {
+
+        // ---------------------------------------------------------
+        // EDIT PROFILE FROM PROFILE
+        // ---------------------------------------------------------
+
+        if (selectedPage == "edit-profile-profile") {
+
+            selectedPage = "profile"
+
+            return@BackHandler
+        }
+
+
+        // ---------------------------------------------------------
+        // EDIT PROFILE FROM SETTINGS
+        // ---------------------------------------------------------
+
+        if (selectedPage == "edit-profile-settings") {
+
+            selectedPage = "settings"
+
+            return@BackHandler
+        }
+
+
+        // ---------------------------------------------------------
+        // ROADMAP DETAIL
+        // ---------------------------------------------------------
+
+        if (selectedPage == "roadmap-detail") {
+
+            generatedRoadmap = ""
+            generatedRoadmapId = ""
+
+            selectedPage = "learning"
+
+            myLearningRefreshKey++
+
+            return@BackHandler
+        }
+
+
+        // ---------------------------------------------------------
+        // ROADMAP GENERATION
+        // ---------------------------------------------------------
+
+        if (
+            selectedPage == "roadmap" &&
+            showGenerateRoadmap
+        ) {
+
+            showGenerateRoadmap = false
+            selectedPage = "home"
+
+            return@BackHandler
+        }
+
+
+        // ---------------------------------------------------------
+        // OTHER MAIN PAGES
+        // ---------------------------------------------------------
+
+        when (selectedPage) {
+
+            "learning" -> {
+                selectedPage = "home"
+            }
+
+            "profile" -> {
+                selectedPage = "home"
+            }
+
+            "settings" -> {
+                selectedPage = "home"
+            }
+
+            "home" -> {
+                // Already on Home.
+            }
+        }
+    }
+
+
+    // =========================================================
+    // NOT LOGGED IN
+    // =========================================================
 
     if (!isLoggedIn) {
 
@@ -174,6 +245,9 @@ fun SkillLinkApp() {
                     selectedPage = "home"
 
                     showGenerateRoadmap = false
+
+                    generatedRoadmap = ""
+                    generatedRoadmapId = ""
                 }
             )
         }
@@ -181,98 +255,44 @@ fun SkillLinkApp() {
         return
     }
 
-    /*
-     * ------------------------------------------------
-     * PROFILE SETUP
-     * ------------------------------------------------
-     */
 
-    if (showProfileSetup) {
-
-        when (profileSetupStep) {
-
-            1 -> {
-
-                ProfileSetupScreen(
-
-                    onNext = {
-                        profileSetupStep = 2
-                    },
-
-                    onSkip = {
-
-                        showProfileSetup = false
-                        profileSetupStep = 1
-                        selectedPage = "home"
-                    }
-                )
-            }
-
-            2 -> {
-
-                SkillsKnownScreen(
-
-                    onNext = {
-                        profileSetupStep = 3
-                    },
-
-                    onBack = {
-                        profileSetupStep = 1
-                    }
-                )
-            }
-
-            3 -> {
-
-                SkillsToLearnScreen(
-
-                    onFinish = {
-
-                        showProfileSetup = false
-                        profileSetupStep = 1
-                        selectedPage = "home"
-                    },
-
-                    onBack = {
-                        profileSetupStep = 2
-                    }
-                )
-            }
-        }
-
-        return
-    }
-
-    /*
-     * ------------------------------------------------
-     * EDIT PROFILE
-     * ------------------------------------------------
-     */
+    // =========================================================
+    // EDIT PROFILE
+    // =========================================================
 
     if (
-        selectedPage == "profile" &&
-        showEditProfile
+        selectedPage == "edit-profile-profile" ||
+        selectedPage == "edit-profile-settings"
     ) {
+
+        val returnPage =
+            if (selectedPage == "edit-profile-settings") {
+                "settings"
+            } else {
+                "profile"
+            }
+
 
         EditProfileScreen(
 
             onBack = {
-                showEditProfile = false
+
+                selectedPage = returnPage
             },
 
             onSave = {
-                showEditProfile = false
+
+                selectedPage = returnPage
             }
         )
 
         return
     }
 
-    /*
-     * ------------------------------------------------
-     * ROADMAP DETAIL
-     * ------------------------------------------------
-     */
+
+    // =========================================================
+    // ROADMAP DETAIL
+    // =========================================================
 
     if (
         selectedPage == "roadmap-detail" &&
@@ -299,11 +319,10 @@ fun SkillLinkApp() {
         return
     }
 
-    /*
-     * ------------------------------------------------
-     * MAIN APP
-     * ------------------------------------------------
-     */
+
+    // =========================================================
+    // MAIN APP
+    // =========================================================
 
     Scaffold(
 
@@ -311,29 +330,25 @@ fun SkillLinkApp() {
 
             NavigationBar {
 
-                /*
-                 * ------------------------------------------------
-                 * HOME
-                 * ------------------------------------------------
-                 */
+
+                // =================================================
+                // HOME
+                // =================================================
 
                 NavigationBarItem(
 
-                    selected =
-                        selectedPage == "home",
+                    selected = selectedPage == "home",
 
                     onClick = {
 
                         selectedPage = "home"
-
                         showGenerateRoadmap = false
-                        showEditProfile = false
                     },
 
                     icon = {
 
                         Icon(
-                            Icons.Default.Home,
+                            imageVector = Icons.Default.Home,
                             contentDescription = "Home"
                         )
                     },
@@ -343,23 +358,19 @@ fun SkillLinkApp() {
                     }
                 )
 
-                /*
-                 * ------------------------------------------------
-                 * ROADMAP
-                 * ------------------------------------------------
-                 */
+
+                // =================================================
+                // ROADMAP
+                // =================================================
 
                 NavigationBarItem(
 
-                    selected =
-                        selectedPage == "roadmap",
+                    selected = selectedPage == "roadmap",
 
                     onClick = {
 
                         selectedPage = "roadmap"
-
                         showGenerateRoadmap = true
-                        showEditProfile = false
                     },
 
                     icon = {
@@ -372,23 +383,19 @@ fun SkillLinkApp() {
                     }
                 )
 
-                /*
-                 * ------------------------------------------------
-                 * MY LEARNING
-                 * ------------------------------------------------
-                 */
+
+                // =================================================
+                // MY LEARNING
+                // =================================================
 
                 NavigationBarItem(
 
-                    selected =
-                        selectedPage == "learning",
+                    selected = selectedPage == "learning",
 
                     onClick = {
 
                         selectedPage = "learning"
-
                         showGenerateRoadmap = false
-                        showEditProfile = false
 
                         myLearningRefreshKey++
                     },
@@ -403,29 +410,25 @@ fun SkillLinkApp() {
                     }
                 )
 
-                /*
-                 * ------------------------------------------------
-                 * PROFILE
-                 * ------------------------------------------------
-                 */
+
+                // =================================================
+                // PROFILE
+                // =================================================
 
                 NavigationBarItem(
 
-                    selected =
-                        selectedPage == "profile",
+                    selected = selectedPage == "profile",
 
                     onClick = {
 
                         selectedPage = "profile"
-
                         showGenerateRoadmap = false
-                        showEditProfile = false
                     },
 
                     icon = {
 
                         Icon(
-                            Icons.Default.Person,
+                            imageVector = Icons.Default.Person,
                             contentDescription = "Profile"
                         )
                     },
@@ -435,29 +438,25 @@ fun SkillLinkApp() {
                     }
                 )
 
-                /*
-                 * ------------------------------------------------
-                 * SETTINGS
-                 * ------------------------------------------------
-                 */
+
+                // =================================================
+                // SETTINGS
+                // =================================================
 
                 NavigationBarItem(
 
-                    selected =
-                        selectedPage == "settings",
+                    selected = selectedPage == "settings",
 
                     onClick = {
 
                         selectedPage = "settings"
-
                         showGenerateRoadmap = false
-                        showEditProfile = false
                     },
 
                     icon = {
 
                         Icon(
-                            Icons.Default.Settings,
+                            imageVector = Icons.Default.Settings,
                             contentDescription = "Settings"
                         )
                     },
@@ -477,26 +476,38 @@ fun SkillLinkApp() {
                 .padding(innerPadding)
         ) {
 
-            /*
-             * ------------------------------------------------
-             * HOME
-             * ------------------------------------------------
-             */
+
+            // =====================================================
+            // HOME
+            // =====================================================
 
             if (selectedPage == "home") {
 
                 HomeScreen(
 
-                    onCompleteProfile = {
-
-                        profileSetupStep = 1
-                        showProfileSetup = true
-                    },
-
                     onGenerateRoadmap = {
 
                         selectedPage = "roadmap"
                         showGenerateRoadmap = true
+                    },
+
+                    // NEW: handles the "Continue learning" button
+                    onContinueLearning = {
+
+                        if (
+                            generatedRoadmapId.isNotBlank() &&
+                            generatedRoadmap.isNotBlank()
+                        ) {
+
+                            selectedPage = "roadmap-detail"
+
+                        } else {
+
+                            selectedPage = "learning"
+                            showGenerateRoadmap = false
+
+                            myLearningRefreshKey++
+                        }
                     },
 
                     onLogout = {
@@ -523,11 +534,10 @@ fun SkillLinkApp() {
                 )
             }
 
-            /*
-             * ------------------------------------------------
-             * ROADMAP GENERATION
-             * ------------------------------------------------
-             */
+
+            // =====================================================
+            // ROADMAP GENERATION
+            // =====================================================
 
             else if (
                 selectedPage == "roadmap" &&
@@ -552,27 +562,23 @@ fun SkillLinkApp() {
                             roadmapJson,
                             roadmapId ->
 
-                        generatedRoadmap =
-                            roadmapJson
+                        generatedRoadmap = roadmapJson
 
-                        generatedRoadmapId =
-                            roadmapId
+                        generatedRoadmapId = roadmapId
 
                         myLearningRefreshKey++
 
                         showGenerateRoadmap = false
 
-                        selectedPage =
-                            "roadmap-detail"
+                        selectedPage = "roadmap-detail"
                     }
                 )
             }
 
-            /*
-             * ------------------------------------------------
-             * MY LEARNING
-             * ------------------------------------------------
-             */
+
+            // =====================================================
+            // MY LEARNING
+            // =====================================================
 
             else if (
                 selectedPage == "learning"
@@ -580,39 +586,32 @@ fun SkillLinkApp() {
 
                 MyLearningScreen(
 
-                    refreshKey =
-                        myLearningRefreshKey,
+                    refreshKey = myLearningRefreshKey,
 
                     onOpenRoadmap = {
                             roadmapId,
                             roadmapJson ->
 
-                        generatedRoadmapId =
-                            roadmapId
+                        generatedRoadmapId = roadmapId
 
-                        generatedRoadmap =
-                            roadmapJson
+                        generatedRoadmap = roadmapJson
 
-                        selectedPage =
-                            "roadmap-detail"
+                        selectedPage = "roadmap-detail"
                     },
 
                     onGenerateRoadmap = {
 
-                        selectedPage =
-                            "roadmap"
+                        selectedPage = "roadmap"
 
-                        showGenerateRoadmap =
-                            true
+                        showGenerateRoadmap = true
                     }
                 )
             }
 
-            /*
-             * ------------------------------------------------
-             * PROFILE
-             * ------------------------------------------------
-             */
+
+            // =====================================================
+            // PROFILE
+            // =====================================================
 
             else if (
                 selectedPage == "profile"
@@ -622,16 +621,15 @@ fun SkillLinkApp() {
 
                     onEditProfile = {
 
-                        showEditProfile = true
+                        selectedPage = "edit-profile-profile"
                     }
                 )
             }
 
-            /*
-             * ------------------------------------------------
-             * SETTINGS
-             * ------------------------------------------------
-             */
+
+            // =====================================================
+            // SETTINGS
+            // =====================================================
 
             else if (
                 selectedPage == "settings"
@@ -660,6 +658,11 @@ fun SkillLinkApp() {
                             generatedRoadmap = ""
                             generatedRoadmapId = ""
                         }
+                    },
+
+                    onEditProfile = {
+
+                        selectedPage = "edit-profile-settings"
                     }
                 )
             }
