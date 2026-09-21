@@ -1,12 +1,11 @@
 package com.example.skilllinkapp.screens
 
-
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,10 +17,20 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,10 +38,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.skilllinkapp.data.supabase
 import com.example.skilllinkapp.ui.theme.SkillLinkBackground
 import com.example.skilllinkapp.ui.theme.SkillLinkLightPurple
 import com.example.skilllinkapp.ui.theme.SkillLinkNavy
 import com.example.skilllinkapp.ui.theme.SkillLinkPurple
+import io.github.jan.supabase.auth.auth
+import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(
@@ -40,6 +52,32 @@ fun SettingsScreen(
     onLogout: () -> Unit,
     onEditProfile: () -> Unit = {}
 ) {
+
+    val scope = rememberCoroutineScope()
+
+    var showPasswordDialog by remember {
+        mutableStateOf(false)
+    }
+
+    var showHelpDialog by remember {
+        mutableStateOf(false)
+    }
+
+    var passwordLoading by remember {
+        mutableStateOf(false)
+    }
+
+    var passwordMessage by remember {
+        mutableStateOf("")
+    }
+
+    var passwordError by remember {
+        mutableStateOf(false)
+    }
+
+    val currentUser = supabase.auth.currentUserOrNull()
+
+    val currentEmail = currentUser?.email ?: ""
 
     Column(
         modifier = Modifier
@@ -64,13 +102,17 @@ fun SettingsScreen(
             Surface(
                 modifier = Modifier
                     .size(42.dp)
-                    .clickable { onBack() },
+                    .clickable {
+                        onBack()
+                    },
                 shape = RoundedCornerShape(13.dp),
                 color = Color.White
             ) {
+
                 Box(
                     contentAlignment = Alignment.Center
                 ) {
+
                     Text(
                         text = "‹",
                         color = SkillLinkNavy,
@@ -85,6 +127,7 @@ fun SettingsScreen(
             )
 
             Column {
+
                 Text(
                     text = "Settings",
                     style = MaterialTheme.typography.headlineSmall,
@@ -111,7 +154,9 @@ fun SettingsScreen(
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { onEditProfile() },
+                .clickable {
+                    onEditProfile()
+                },
             shape = RoundedCornerShape(22.dp),
             color = SkillLinkPurple
         ) {
@@ -128,6 +173,7 @@ fun SettingsScreen(
                         .background(Color.White),
                     contentAlignment = Alignment.Center
                 ) {
+
                     Text(
                         text = "S",
                         color = SkillLinkPurple,
@@ -202,7 +248,9 @@ fun SettingsScreen(
                 title = "Change password",
                 subtitle = "Keep your account secure",
                 onClick = {
-                    // Future feature
+                    passwordMessage = ""
+                    passwordError = false
+                    showPasswordDialog = true
                 }
             )
         }
@@ -280,7 +328,7 @@ fun SettingsScreen(
                 title = "Help & support",
                 subtitle = "Get help with SkillLink",
                 onClick = {
-                    // Future feature
+                    showHelpDialog = true
                 }
             )
         }
@@ -318,6 +366,7 @@ fun SettingsScreen(
                         .background(Color(0xFFFFDDE1)),
                     contentAlignment = Alignment.Center
                 ) {
+
                     Text(
                         text = "↪",
                         color = Color(0xFFE54858),
@@ -400,6 +449,263 @@ fun SettingsScreen(
             modifier = Modifier.height(10.dp)
         )
     }
+
+    // =========================================================
+    // CHANGE PASSWORD DIALOG
+    // =========================================================
+
+    if (showPasswordDialog) {
+
+        AlertDialog(
+            onDismissRequest = {
+                if (!passwordLoading) {
+                    showPasswordDialog = false
+                }
+            },
+
+            title = {
+                Text(
+                    text = "Change password",
+                    fontWeight = FontWeight.Bold,
+                    color = SkillLinkNavy
+                )
+            },
+
+            text = {
+
+                Column {
+
+                    Text(
+                        text = "We'll send a secure password reset link to:",
+                        color = Color(0xFF85849A),
+                        fontSize = 14.sp
+                    )
+
+                    Spacer(
+                        modifier = Modifier.height(10.dp)
+                    )
+
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        color = SkillLinkLightPurple
+                    ) {
+
+                        Text(
+                            text = currentEmail.ifBlank {
+                                "Your registered email"
+                            },
+                            modifier = Modifier.padding(12.dp),
+                            color = SkillLinkNavy,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    if (passwordMessage.isNotBlank()) {
+
+                        Spacer(
+                            modifier = Modifier.height(14.dp)
+                        )
+
+                        Text(
+                            text = passwordMessage,
+                            color = if (passwordError) {
+                                Color(0xFFD32F2F)
+                            } else {
+                                Color(0xFF2E7D32)
+                            },
+                            fontSize = 13.sp
+                        )
+                    }
+                }
+            },
+
+            confirmButton = {
+
+                Button(
+                    onClick = {
+
+                        if (currentEmail.isBlank()) {
+
+                            passwordError = true
+                            passwordMessage =
+                                "We couldn't find an email address for this account."
+
+                            return@Button
+                        }
+
+                        scope.launch {
+
+                            passwordLoading = true
+                            passwordMessage = ""
+                            passwordError = false
+
+                            try {
+
+                                supabase.auth.resetPasswordForEmail(
+                                    email = currentEmail
+                                )
+
+                                passwordLoading = false
+                                passwordError = false
+                                passwordMessage =
+                                    "Password reset email sent. Check your inbox and follow the link to create a new password."
+
+                            } catch (e: Exception) {
+
+                                passwordLoading = false
+                                passwordError = true
+                                passwordMessage =
+                                    e.message ?: "Unable to send the password reset email."
+                            }
+                        }
+                    },
+
+                    enabled = !passwordLoading,
+
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = SkillLinkPurple
+                    )
+                ) {
+
+                    if (passwordLoading) {
+
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp
+                        )
+
+                    } else {
+
+                        Text(
+                            text = "Send reset link"
+                        )
+                    }
+                }
+            },
+
+            dismissButton = {
+
+                TextButton(
+                    onClick = {
+                        showPasswordDialog = false
+                    },
+                    enabled = !passwordLoading
+                ) {
+
+                    Text(
+                        text = "Cancel",
+                        color = SkillLinkPurple
+                    )
+                }
+            }
+        )
+    }
+
+    // =========================================================
+    // HELP & SUPPORT DIALOG
+    // =========================================================
+
+    if (showHelpDialog) {
+
+        AlertDialog(
+            onDismissRequest = {
+                showHelpDialog = false
+            },
+
+            title = {
+                Text(
+                    text = "Help & support",
+                    color = SkillLinkNavy,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+
+            text = {
+
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+
+                    HelpItem(
+                        question = "How do I create a roadmap?",
+                        answer = "Open the Roadmap section, enter your learning goal and preferences, then select Generate Roadmap."
+                    )
+
+                    HelpItem(
+                        question = "Where are my roadmaps saved?",
+                        answer = "Your generated roadmaps are saved to your SkillLink account and can be accessed from My Learning."
+                    )
+
+                    HelpItem(
+                        question = "How do I track my progress?",
+                        answer = "Open a roadmap from My Learning and mark lessons as completed. Your progress is saved automatically."
+                    )
+
+                    HelpItem(
+                        question = "How do I update my profile?",
+                        answer = "Open Profile or Settings, then select Edit profile."
+                    )
+
+                    HelpItem(
+                        question = "Still need help?",
+                        answer = "If you encounter a problem that isn't covered here, contact the SkillLink support team."
+                    )
+                }
+            },
+
+            confirmButton = {
+
+                TextButton(
+                    onClick = {
+                        showHelpDialog = false
+                    }
+                ) {
+
+                    Text(
+                        text = "Done",
+                        color = SkillLinkPurple,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+        )
+    }
+}
+
+
+// =============================================================
+// HELP ITEM
+// =============================================================
+
+@Composable
+private fun HelpItem(
+    question: String,
+    answer: String
+) {
+
+    Column {
+
+        Text(
+            text = question,
+            color = SkillLinkNavy,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        Spacer(
+            modifier = Modifier.height(3.dp)
+        )
+
+        Text(
+            text = answer,
+            color = Color(0xFF85849A),
+            fontSize = 12.sp,
+            lineHeight = 17.sp
+        )
+    }
 }
 
 
@@ -472,10 +778,6 @@ private fun SettingsItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
 
-        // -----------------------------------------------------
-        // ICON
-        // -----------------------------------------------------
-
         Box(
             modifier = Modifier
                 .size(44.dp)
@@ -495,10 +797,6 @@ private fun SettingsItem(
         Spacer(
             modifier = Modifier.size(14.dp)
         )
-
-        // -----------------------------------------------------
-        // TEXT
-        // -----------------------------------------------------
 
         Column(
             modifier = Modifier.weight(1f)
@@ -521,10 +819,6 @@ private fun SettingsItem(
                 fontSize = 12.sp
             )
         }
-
-        // -----------------------------------------------------
-        // CHEVRON
-        // -----------------------------------------------------
 
         Text(
             text = "›",

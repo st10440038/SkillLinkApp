@@ -231,12 +231,6 @@ fun GenerateRoadmapScreen(
                         color = Color.White,
                         fontWeight = FontWeight.Bold
                     )
-
-                    Text(
-                        text = "Powered by AI",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.82f)
-                    )
                 }
             }
 
@@ -391,42 +385,6 @@ fun GenerateRoadmapScreen(
         )
 
         FormCard {
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-
-                Box(
-                    modifier = Modifier
-                        .size(34.dp)
-                        .clip(CircleShape)
-                        .background(SoftPurple),
-                    contentAlignment = Alignment.Center
-                ) {
-
-                    Text(
-                        text = "E",
-                        color = SkillLinkPurple,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Spacer(
-                    modifier = Modifier.width(10.dp)
-                )
-
-                Text(
-                    text = "Experience level",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = SkillLinkNavy,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-
-            Spacer(
-                modifier = Modifier.height(16.dp)
-            )
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -471,38 +429,6 @@ fun GenerateRoadmapScreen(
         )
 
         FormCard {
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-
-                Box(
-                    modifier = Modifier
-                        .size(34.dp)
-                        .clip(CircleShape)
-                        .background(SoftPurple),
-                    contentAlignment = Alignment.Center
-                ) {
-
-                    Text(
-                        text = "T",
-                        color = SkillLinkPurple,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Spacer(
-                    modifier = Modifier.width(10.dp)
-                )
-
-                Text(
-                    text = "Weekly learning time",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = SkillLinkNavy,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-
             Spacer(
                 modifier = Modifier.height(16.dp)
             )
