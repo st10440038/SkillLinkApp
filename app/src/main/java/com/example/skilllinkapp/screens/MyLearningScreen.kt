@@ -1,7 +1,5 @@
 package com.example.skilllinkapp.screens
 
-
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -10,11 +8,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -55,6 +55,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonPrimitive
 
+
 private val PageBackground = Color(0xFFF7F5FC)
 private val White = Color.White
 private val TextSecondary = Color(0xFF77737D)
@@ -64,12 +65,14 @@ private val SoftGreen = Color(0xFFEAF8F0)
 private val Green = Color(0xFF25855A)
 private val PurpleDark = Color(0xFF6941C6)
 
+
 @Composable
 fun MyLearningScreen(
     refreshKey: Int = 0,
     onOpenRoadmap: (String, String) -> Unit,
     onGenerateRoadmap: () -> Unit
 ) {
+
     var roadmaps by remember {
         mutableStateOf<List<JsonObject>>(emptyList())
     }
@@ -96,12 +99,20 @@ fun MyLearningScreen(
 
     val scope = rememberCoroutineScope()
 
+
+    // =========================================================
+    // LOAD ROADMAPS
+    // =========================================================
+
     LaunchedEffect(refreshKey) {
+
         val user = supabase.auth.currentUserOrNull()
 
         if (user == null) {
+
             isLoading = false
             errorMessage = "You must be logged in."
+
             return@LaunchedEffect
         }
 
@@ -109,15 +120,20 @@ fun MyLearningScreen(
         errorMessage = ""
 
         try {
+
             val userRoadmaps =
                 supabase
                     .from("roadmaps")
                     .select {
                         filter {
-                            eq("user_id", user.id)
+                            eq(
+                                "user_id",
+                                user.id
+                            )
                         }
                     }
                     .decodeList<JsonObject>()
+
 
             roadmaps =
                 userRoadmaps
@@ -128,8 +144,11 @@ fun MyLearningScreen(
                                 ?: return@filter false
 
                         try {
+
                             val roadmapObject =
-                                parseRoadmapData(roadmapData)
+                                parseRoadmapData(
+                                    roadmapData
+                                )
 
                             val title =
                                 roadmapObject["title"]
@@ -141,18 +160,22 @@ fun MyLearningScreen(
                             isProperRoadmapTitle(title)
 
                         } catch (_: Exception) {
+
                             false
                         }
                     }
                     .sortedByDescending { roadmap ->
+
                         roadmap["created_at"]
                             ?.jsonPrimitive
                             ?.content
                             ?: ""
                     }
 
+
             val progressMap =
                 mutableMapOf<String, Pair<Int, Int>>()
+
 
             for (roadmap in roadmaps) {
 
@@ -167,10 +190,14 @@ fun MyLearningScreen(
                         ?: continue
 
                 val roadmapObject =
-                    parseRoadmapData(roadmapData)
+                    parseRoadmapData(
+                        roadmapData
+                    )
 
                 val totalLessons =
-                    countLessons(roadmapObject)
+                    countLessons(
+                        roadmapObject
+                    )
 
                 val progress =
                     ProgressRepository.getProgress(
@@ -190,7 +217,9 @@ fun MyLearningScreen(
                     )
             }
 
-            roadmapProgress = progressMap
+            roadmapProgress =
+                progressMap
+
             isLoading = false
 
         } catch (e: Exception) {
@@ -202,6 +231,11 @@ fun MyLearningScreen(
             isLoading = false
         }
     }
+
+
+    // =========================================================
+    // FILTERED ROADMAPS
+    // =========================================================
 
     val displayedRoadmaps =
         roadmaps.filter { roadmap ->
@@ -226,11 +260,15 @@ fun MyLearningScreen(
                         completed >= total
 
             if (showCompleted) {
+
                 completedRoadmap
+
             } else {
+
                 !completedRoadmap
             }
         }
+
 
     val inProgressCount =
         roadmaps.count { roadmap ->
@@ -253,6 +291,7 @@ fun MyLearningScreen(
             !(total > 0 && completed >= total)
         }
 
+
     val completedCount =
         roadmaps.count { roadmap ->
 
@@ -271,8 +310,14 @@ fun MyLearningScreen(
             val total =
                 progress?.second ?: 0
 
-            total > 0 && completed >= total
+            total > 0 &&
+                    completed >= total
         }
+
+
+    // =========================================================
+    // UI
+    // =========================================================
 
     Column(
         modifier = Modifier
@@ -280,9 +325,9 @@ fun MyLearningScreen(
             .background(PageBackground)
     ) {
 
-        // ---------------------------------------------------------
+        // =====================================================
         // HEADER
-        // ---------------------------------------------------------
+        // =====================================================
 
         Column(
             modifier = Modifier
@@ -305,6 +350,7 @@ fun MyLearningScreen(
                         .background(SkillLinkPurple),
                     contentAlignment = Alignment.Center
                 ) {
+
                     Text(
                         text = "S",
                         style = MaterialTheme.typography.titleLarge,
@@ -318,6 +364,7 @@ fun MyLearningScreen(
                 )
 
                 Column {
+
                     Text(
                         text = "My Learning",
                         style = MaterialTheme.typography.headlineSmall,
@@ -337,9 +384,10 @@ fun MyLearningScreen(
                 modifier = Modifier.height(20.dp)
             )
 
-            // -----------------------------------------------------
+
+            // =================================================
             // SUMMARY CARD
-            // -----------------------------------------------------
+            // =================================================
 
             Surface(
                 modifier = Modifier.fillMaxWidth(),
@@ -416,9 +464,10 @@ fun MyLearningScreen(
             modifier = Modifier.height(20.dp)
         )
 
-        // ---------------------------------------------------------
+
+        // =====================================================
         // FILTERS
-        // ---------------------------------------------------------
+        // =====================================================
 
         Row(
             modifier = Modifier
@@ -450,9 +499,10 @@ fun MyLearningScreen(
             modifier = Modifier.height(20.dp)
         )
 
-        // ---------------------------------------------------------
+
+        // =====================================================
         // CONTENT
-        // ---------------------------------------------------------
+        // =====================================================
 
         Box(
             modifier = Modifier
@@ -461,6 +511,10 @@ fun MyLearningScreen(
         ) {
 
             when {
+
+                // -------------------------------------------------
+                // LOADING
+                // -------------------------------------------------
 
                 isLoading -> {
 
@@ -488,6 +542,11 @@ fun MyLearningScreen(
                     }
                 }
 
+
+                // -------------------------------------------------
+                // ERROR
+                // -------------------------------------------------
+
                 errorMessage.isNotBlank() -> {
 
                     EmptyLearningState(
@@ -495,13 +554,16 @@ fun MyLearningScreen(
                         description = errorMessage,
                         buttonText = "Try again",
                         onButtonClick = {
-                            // Trigger another load through
-                            // the existing refresh mechanism.
                             errorMessage = ""
                             isLoading = true
                         }
                     )
                 }
+
+
+                // -------------------------------------------------
+                // EMPTY
+                // -------------------------------------------------
 
                 displayedRoadmaps.isEmpty() -> {
 
@@ -512,39 +574,49 @@ fun MyLearningScreen(
                             } else {
                                 "No roadmaps yet"
                             },
+
                         description =
                             if (showCompleted) {
                                 "Complete a roadmap and it will appear here."
                             } else {
                                 "Create a personalised roadmap and start your learning journey."
                             },
+
                         buttonText =
                             if (showCompleted) {
                                 "View In Progress"
                             } else {
                                 "Generate Roadmap"
                             },
+
                         onButtonClick = {
 
                             if (showCompleted) {
+
                                 showCompleted = false
+
                             } else {
+
                                 onGenerateRoadmap()
                             }
                         }
                     )
                 }
 
+
+                // -------------------------------------------------
+                // ROADMAP LIST
+                // -------------------------------------------------
+
                 else -> {
 
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding =
-                            androidx.compose.foundation.layout.PaddingValues(
-                                start = 20.dp,
-                                end = 20.dp,
-                                bottom = 28.dp
-                            ),
+                        contentPadding = PaddingValues(
+                            start = 20.dp,
+                            end = 20.dp,
+                            bottom = 28.dp
+                        ),
                         verticalArrangement =
                             Arrangement.spacedBy(12.dp)
                     ) {
@@ -585,6 +657,7 @@ fun MyLearningScreen(
                             )
                         }
 
+
                         items(
                             items = displayedRoadmaps
                         ) { roadmap ->
@@ -606,7 +679,8 @@ fun MyLearningScreen(
                                     )
                                 } catch (_: Exception) {
                                     null
-                                } ?: return@items
+                                }
+                                    ?: return@items
 
                             val title =
                                 roadmapObject["title"]
@@ -645,6 +719,7 @@ fun MyLearningScreen(
                                     ?.content
                                     ?: ""
 
+
                             RoadmapCard(
                                 title = title,
                                 summary = summary,
@@ -655,6 +730,7 @@ fun MyLearningScreen(
                                 completedRoadmap =
                                     total > 0 &&
                                             completed >= total,
+
                                 onClick = {
 
                                     val currentUser =
@@ -687,6 +763,7 @@ fun MyLearningScreen(
                                         roadmapObject.toString()
                                     )
                                 },
+
                                 onDelete = {
                                     roadmapToDelete = roadmap
                                 }
@@ -698,9 +775,10 @@ fun MyLearningScreen(
         }
     }
 
-    // -------------------------------------------------------------
-    // DELETE DIALOG
-    // -------------------------------------------------------------
+
+    // =========================================================
+    // DELETE CONFIRMATION
+    // =========================================================
 
     if (roadmapToDelete != null) {
 
@@ -721,15 +799,19 @@ fun MyLearningScreen(
                     ?: "this roadmap"
 
             } catch (_: Exception) {
+
                 "this roadmap"
             }
 
+
         AlertDialog(
+
             onDismissRequest = {
                 roadmapToDelete = null
             },
 
             title = {
+
                 Text(
                     text = "Delete roadmap?",
                     color = SkillLinkNavy,
@@ -738,6 +820,7 @@ fun MyLearningScreen(
             },
 
             text = {
+
                 Text(
                     text =
                         "Are you sure you want to delete " +
@@ -746,9 +829,14 @@ fun MyLearningScreen(
                 )
             },
 
+            // =====================================================
+            // CONFIRM DELETE
+            // =====================================================
+
             confirmButton = {
 
                 TextButton(
+
                     onClick = {
 
                         val roadmap =
@@ -764,63 +852,122 @@ fun MyLearningScreen(
                                 ?.jsonPrimitive
                                 ?.content
 
+
                         if (
-                            currentUser != null &&
-                            roadmapId != null
+                            currentUser == null ||
+                            roadmapId == null
                         ) {
 
-                            scope.launch {
+                            errorMessage =
+                                "Unable to delete this roadmap. Please log in again."
 
-                                try {
+                            roadmapToDelete = null
 
-                                    supabase
-                                        .from("roadmaps")
-                                        .delete {
-                                            filter {
+                            return@TextButton
+                        }
 
-                                                eq(
-                                                    "roadmap_id",
-                                                    roadmapId
-                                                )
 
-                                                eq(
-                                                    "user_id",
-                                                    currentUser.id
-                                                )
-                                            }
+                        scope.launch {
+
+                            try {
+
+                                /*
+                                 * IMPORTANT:
+                                 *
+                                 * Delete the progress records belonging
+                                 * to this roadmap first.
+                                 */
+
+                                supabase
+                                    .from("progress")
+                                    .delete {
+
+                                        filter {
+
+                                            eq(
+                                                "roadmap_id",
+                                                roadmapId
+                                            )
+
+                                            eq(
+                                                "user_id",
+                                                currentUser.id
+                                            )
+                                        }
+                                    }
+
+
+                                /*
+                                 * Then delete the actual roadmap
+                                 * from the roadmaps table.
+                                 */
+
+                                supabase
+                                    .from("roadmaps")
+                                    .delete {
+
+                                        filter {
+
+                                            eq(
+                                                "roadmap_id",
+                                                roadmapId
+                                            )
+
+                                            eq(
+                                                "user_id",
+                                                currentUser.id
+                                            )
+                                        }
+                                    }
+
+
+                                /*
+                                 * Only update the local UI after
+                                 * Supabase deletion succeeds.
+                                 */
+
+                                roadmaps =
+                                    roadmaps.filterNot { item ->
+
+                                        item["roadmap_id"]
+                                            ?.jsonPrimitive
+                                            ?.content ==
+                                                roadmapId
+                                    }
+
+
+                                roadmapProgress =
+                                    roadmapProgress
+                                        .toMutableMap()
+                                        .apply {
+
+                                            remove(
+                                                roadmapId
+                                            )
                                         }
 
-                                    roadmaps =
-                                        roadmaps.filterNot {
-                                            it["roadmap_id"]
-                                                ?.jsonPrimitive
-                                                ?.content ==
-                                                    roadmapId
-                                        }
 
-                                    roadmapProgress =
-                                        roadmapProgress
-                                            .toMutableMap()
-                                            .apply {
-                                                remove(
-                                                    roadmapId
-                                                )
-                                            }
+                                roadmapToDelete = null
 
-                                    roadmapToDelete = null
+                                errorMessage = ""
 
-                                } catch (e: Exception) {
+                            } catch (e: Exception) {
 
-                                    errorMessage =
-                                        e.message
-                                            ?: "Could not delete roadmap."
+                                /*
+                                 * If Supabase rejects the deletion,
+                                 * the roadmap remains visible locally.
+                                 */
 
-                                    roadmapToDelete = null
-                                }
+                                errorMessage =
+                                    e.message
+                                        ?: "Could not delete roadmap."
+
+                                roadmapToDelete = null
                             }
                         }
                     }
                 ) {
+
                     Text(
                         text = "Delete",
                         color = MaterialTheme.colorScheme.error
@@ -835,12 +982,20 @@ fun MyLearningScreen(
                         roadmapToDelete = null
                     }
                 ) {
-                    Text("Cancel")
+
+                    Text(
+                        text = "Cancel"
+                    )
                 }
             }
         )
     }
 }
+
+
+// =============================================================
+// LEARNING FILTER
+// =============================================================
 
 @Composable
 private fun LearningFilter(
@@ -849,23 +1004,26 @@ private fun LearningFilter(
     selected: Boolean,
     onClick: () -> Unit
 ) {
+
     Surface(
         onClick = onClick,
         modifier = Modifier.height(42.dp),
         shape = RoundedCornerShape(13.dp),
-        color = if (selected) {
-            SkillLinkPurple
-        } else {
-            White
-        },
-        border = if (!selected) {
-            BorderStroke(
-                1.dp,
-                BorderColor
-            )
-        } else {
-            null
-        }
+        color =
+            if (selected) {
+                SkillLinkPurple
+            } else {
+                White
+            },
+        border =
+            if (!selected) {
+                BorderStroke(
+                    1.dp,
+                    BorderColor
+                )
+            } else {
+                null
+            }
     ) {
 
         Row(
@@ -878,16 +1036,18 @@ private fun LearningFilter(
             Text(
                 text = text,
                 style = MaterialTheme.typography.labelLarge,
-                color = if (selected) {
-                    Color.White
-                } else {
-                    SkillLinkNavy
-                },
-                fontWeight = if (selected) {
-                    FontWeight.Bold
-                } else {
-                    FontWeight.Medium
-                }
+                color =
+                    if (selected) {
+                        Color.White
+                    } else {
+                        SkillLinkNavy
+                    },
+                fontWeight =
+                    if (selected) {
+                        FontWeight.Bold
+                    } else {
+                        FontWeight.Medium
+                    }
             )
 
             Spacer(
@@ -907,20 +1067,27 @@ private fun LearningFilter(
                     ),
                 contentAlignment = Alignment.Center
             ) {
+
                 Text(
                     text = count.toString(),
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (selected) {
-                        Color.White
-                    } else {
-                        PurpleDark
-                    },
+                    color =
+                        if (selected) {
+                            Color.White
+                        } else {
+                            PurpleDark
+                        },
                     fontWeight = FontWeight.Bold
                 )
             }
         }
     }
 }
+
+
+// =============================================================
+// ROADMAP CARD
+// =============================================================
 
 @Composable
 private fun RoadmapCard(
@@ -934,10 +1101,13 @@ private fun RoadmapCard(
     onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .clickable(
+                onClick = onClick
+            ),
         shape = RoundedCornerShape(20.dp),
         color = White,
         shadowElevation = 1.dp
@@ -964,18 +1134,22 @@ private fun RoadmapCard(
                         ),
                     contentAlignment = Alignment.Center
                 ) {
+
                     Text(
-                        text = if (completedRoadmap) {
-                            "✓"
-                        } else {
-                            "S"
-                        },
-                        style = MaterialTheme.typography.titleMedium,
-                        color = if (completedRoadmap) {
-                            Green
-                        } else {
-                            SkillLinkPurple
-                        },
+                        text =
+                            if (completedRoadmap) {
+                                "✓"
+                            } else {
+                                "S"
+                            },
+                        style =
+                            MaterialTheme.typography.titleMedium,
+                        color =
+                            if (completedRoadmap) {
+                                Green
+                            } else {
+                                SkillLinkPurple
+                            },
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -990,7 +1164,8 @@ private fun RoadmapCard(
 
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.titleMedium,
+                        style =
+                            MaterialTheme.typography.titleMedium,
                         color = SkillLinkNavy,
                         fontWeight = FontWeight.Bold,
                         maxLines = 2
@@ -1004,7 +1179,8 @@ private fun RoadmapCard(
 
                         Text(
                             text = summary,
-                            style = MaterialTheme.typography.bodySmall,
+                            style =
+                                MaterialTheme.typography.bodySmall,
                             color = TextSecondary,
                             maxLines = 2
                         )
@@ -1015,9 +1191,11 @@ private fun RoadmapCard(
                     onClick = onDelete,
                     modifier = Modifier.size(42.dp)
                 ) {
+
                     Text(
                         text = "⋮",
-                        style = MaterialTheme.typography.headlineSmall,
+                        style =
+                            MaterialTheme.typography.headlineSmall,
                         color = TextSecondary
                     )
                 }
@@ -1033,17 +1211,20 @@ private fun RoadmapCard(
             ) {
 
                 Text(
-                    text = if (completedRoadmap) {
-                        "Completed"
-                    } else {
-                        "Progress"
-                    },
-                    style = MaterialTheme.typography.labelMedium,
-                    color = if (completedRoadmap) {
-                        Green
-                    } else {
-                        SkillLinkNavy
-                    },
+                    text =
+                        if (completedRoadmap) {
+                            "Completed"
+                        } else {
+                            "Progress"
+                        },
+                    style =
+                        MaterialTheme.typography.labelMedium,
+                    color =
+                        if (completedRoadmap) {
+                            Green
+                        } else {
+                            SkillLinkNavy
+                        },
                     fontWeight = FontWeight.SemiBold
                 )
 
@@ -1053,12 +1234,14 @@ private fun RoadmapCard(
 
                 Text(
                     text = "${(percentage * 100).toInt()}%",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = if (completedRoadmap) {
-                        Green
-                    } else {
-                        SkillLinkPurple
-                    },
+                    style =
+                        MaterialTheme.typography.labelMedium,
+                    color =
+                        if (completedRoadmap) {
+                            Green
+                        } else {
+                            SkillLinkPurple
+                        },
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -1069,22 +1252,29 @@ private fun RoadmapCard(
 
             LinearProgressIndicator(
                 progress = {
-                    percentage.coerceIn(0f, 1f)
+                    percentage.coerceIn(
+                        0f,
+                        1f
+                    )
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(8.dp)
-                    .clip(RoundedCornerShape(20.dp)),
-                color = if (completedRoadmap) {
-                    Green
-                } else {
-                    SkillLinkPurple
-                },
-                trackColor = if (completedRoadmap) {
-                    Color(0xFFDDF0E5)
-                } else {
-                    Color(0xFFECEAF2)
-                }
+                    .clip(
+                        RoundedCornerShape(20.dp)
+                    ),
+                color =
+                    if (completedRoadmap) {
+                        Green
+                    } else {
+                        SkillLinkPurple
+                    },
+                trackColor =
+                    if (completedRoadmap) {
+                        Color(0xFFDDF0E5)
+                    } else {
+                        Color(0xFFECEAF2)
+                    }
             )
 
             Spacer(
@@ -1098,7 +1288,8 @@ private fun RoadmapCard(
 
                 Text(
                     text = "$completed of $total lessons",
-                    style = MaterialTheme.typography.bodySmall,
+                    style =
+                        MaterialTheme.typography.bodySmall,
                     color = TextSecondary
                 )
 
@@ -1109,8 +1300,12 @@ private fun RoadmapCard(
                 if (lastAccessed.isNotBlank()) {
 
                     Text(
-                        text = formatLastAccessed(lastAccessed),
-                        style = MaterialTheme.typography.bodySmall,
+                        text =
+                            formatLastAccessed(
+                                lastAccessed
+                            ),
+                        style =
+                            MaterialTheme.typography.bodySmall,
                         color = TextSecondary,
                         maxLines = 1
                     )
@@ -1124,32 +1319,38 @@ private fun RoadmapCard(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
-                color = if (completedRoadmap) {
-                    SoftGreen
-                } else {
-                    SoftPurple
-                }
+                color =
+                    if (completedRoadmap) {
+                        SoftGreen
+                    } else {
+                        SoftPurple
+                    }
             ) {
+
                 Row(
                     modifier = Modifier.padding(
                         horizontal = 14.dp,
                         vertical = 11.dp
                     ),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment =
+                        Alignment.CenterVertically
                 ) {
 
                     Text(
-                        text = if (completedRoadmap) {
-                            "✓  Roadmap completed"
-                        } else {
-                            "Continue learning  →"
-                        },
-                        style = MaterialTheme.typography.labelLarge,
-                        color = if (completedRoadmap) {
-                            Green
-                        } else {
-                            PurpleDark
-                        },
+                        text =
+                            if (completedRoadmap) {
+                                "✓  Roadmap completed"
+                            } else {
+                                "Continue learning  →"
+                            },
+                        style =
+                            MaterialTheme.typography.labelLarge,
+                        color =
+                            if (completedRoadmap) {
+                                Green
+                            } else {
+                                PurpleDark
+                            },
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -1158,6 +1359,11 @@ private fun RoadmapCard(
     }
 }
 
+
+// =============================================================
+// EMPTY STATE
+// =============================================================
+
 @Composable
 private fun EmptyLearningState(
     title: String,
@@ -1165,6 +1371,7 @@ private fun EmptyLearningState(
     buttonText: String,
     onButtonClick: () -> Unit
 ) {
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -1172,7 +1379,8 @@ private fun EmptyLearningState(
                 horizontal = 30.dp,
                 vertical = 35.dp
             ),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment =
+            Alignment.CenterHorizontally
     ) {
 
         Box(
@@ -1182,9 +1390,11 @@ private fun EmptyLearningState(
                 .background(SoftPurple),
             contentAlignment = Alignment.Center
         ) {
+
             Text(
                 text = "S",
-                style = MaterialTheme.typography.headlineMedium,
+                style =
+                    MaterialTheme.typography.headlineMedium,
                 color = SkillLinkPurple,
                 fontWeight = FontWeight.Bold
             )
@@ -1196,7 +1406,8 @@ private fun EmptyLearningState(
 
         Text(
             text = title,
-            style = MaterialTheme.typography.titleLarge,
+            style =
+                MaterialTheme.typography.titleLarge,
             color = SkillLinkNavy,
             fontWeight = FontWeight.Bold
         )
@@ -1207,10 +1418,12 @@ private fun EmptyLearningState(
 
         Text(
             text = description,
-            style = MaterialTheme.typography.bodyMedium,
+            style =
+                MaterialTheme.typography.bodyMedium,
             color = TextSecondary,
             modifier = Modifier.fillMaxWidth(),
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            textAlign =
+                androidx.compose.ui.text.style.TextAlign.Center
         )
 
         Spacer(
@@ -1220,13 +1433,15 @@ private fun EmptyLearningState(
         Button(
             onClick = onButtonClick,
             shape = RoundedCornerShape(14.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = SkillLinkPurple
-            ),
+            colors =
+                ButtonDefaults.buttonColors(
+                    containerColor = SkillLinkPurple
+                ),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp)
         ) {
+
             Text(
                 text = buttonText,
                 fontWeight = FontWeight.Bold
@@ -1235,6 +1450,11 @@ private fun EmptyLearningState(
     }
 }
 
+
+// =============================================================
+// PARSE ROADMAP DATA
+// =============================================================
+
 private fun parseRoadmapData(
     element: JsonElement
 ): JsonObject {
@@ -1242,10 +1462,12 @@ private fun parseRoadmapData(
     var current = element
 
     repeat(4) {
+
         if (
             current is JsonPrimitive &&
             current.isString
         ) {
+
             current =
                 Json.parseToJsonElement(
                     current.content
@@ -1259,18 +1481,23 @@ private fun parseRoadmapData(
                 "roadmap_data could not be converted into a JSON object."
             )
 
+
     val generatedRoadmap =
         objectData["generated_roadmap"]
 
+
     if (generatedRoadmap != null) {
 
-        var inner = generatedRoadmap
+        var inner =
+            generatedRoadmap
 
         repeat(4) {
+
             if (
                 inner is JsonPrimitive &&
                 inner.isString
             ) {
+
                 inner =
                     Json.parseToJsonElement(
                         inner.content
@@ -1286,6 +1513,11 @@ private fun parseRoadmapData(
 
     return objectData
 }
+
+
+// =============================================================
+// COUNT LESSONS
+// =============================================================
 
 private fun countLessons(
     roadmap: JsonObject
@@ -1308,6 +1540,11 @@ private fun countLessons(
         lessons.size
     }
 }
+
+
+// =============================================================
+// VALID ROADMAP TITLE
+// =============================================================
 
 private fun isProperRoadmapTitle(
     title: String
@@ -1335,6 +1572,11 @@ private fun isProperRoadmapTitle(
     return cleaned !in invalidTitles
 }
 
+
+// =============================================================
+// FORMAT LAST ACCESSED
+// =============================================================
+
 private fun formatLastAccessed(
     timestamp: String
 ): String {
@@ -1342,7 +1584,9 @@ private fun formatLastAccessed(
     return try {
 
         val instant =
-            java.time.Instant.parse(timestamp)
+            java.time.Instant.parse(
+                timestamp
+            )
 
         val zone =
             java.time.ZoneId.systemDefault()
@@ -1379,6 +1623,7 @@ private fun formatLastAccessed(
         }
 
     } catch (_: Exception) {
+
         ""
     }
 }
