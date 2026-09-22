@@ -319,7 +319,7 @@ Before running SkillLink, make sure you have:
 ### Clone the Repository
 
 ```bash
-git clone <YOUR-REPOSITORY-URL>
+git clone <(https://github.com/st10440038/SkillLinkApp)>
 cd SkillLink
 ```
 
