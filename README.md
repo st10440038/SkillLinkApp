@@ -319,8 +319,8 @@ Before running SkillLink, make sure you have:
 ### Clone the Repository
 
 ```bash
-git clone <(https://github.com/st10440038/SkillLinkApp)>
-cd SkillLink
+git clone https://github.com/st10440038/SkillLinkApp.git
+cd SkillLinkApp
 ```
 
 Open the project in **Android Studio** and allow Gradle to synchronise.
