@@ -1,5 +1,7 @@
+
 package com.example.skilllinkapp.screens
 
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.skilllinkapp.LanguageSupport
 import com.example.skilllinkapp.data.supabase
 import com.example.skilllinkapp.ui.theme.SkillLinkBackground
 import com.example.skilllinkapp.ui.theme.SkillLinkLightPurple
@@ -48,11 +51,42 @@ import io.github.jan.supabase.postgrest.from
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
+private fun profileScreenText(english: String): String {
+    return when (LanguageSupport.currentLanguage.value) {
+        LanguageSupport.AFRIKAANS -> when (english) {
+            "Profile" -> "Profiel"
+            "About me" -> "Oor my"
+            "Location" -> "Ligging"
+            "Roadmaps" -> "Leerroetes"
+            "Skills" -> "Vaardighede"
+            "Day streak" -> "Dagreeks"
+            "Edit Profile" -> "Wysig profiel"
+            "Edit profile" -> "Wysig profiel"
+            "Profile picture" -> "Profielfoto"
+            else -> english
+        }
+
+        LanguageSupport.ZULU -> when (english) {
+            "Profile" -> "Iphrofayela"
+            "About me" -> "Mayelana nami"
+            "Location" -> "Indawo"
+            "Roadmaps" -> "Izinhlelo zokufunda"
+            "Skills" -> "Amakhono"
+            "Day streak" -> "Izinsuku ezilandelanayo"
+            "Edit Profile" -> "Hlela iphrofayela"
+            "Edit profile" -> "Hlela iphrofayela"
+            "Profile picture" -> "Isithombe sephrofayela"
+            else -> english
+        }
+
+        else -> english
+    }
+}
+
 @Composable
 fun ProfileScreen(
     onEditProfile: () -> Unit
 ) {
-
     var fullName by remember { mutableStateOf("User") }
     var email by remember { mutableStateOf("") }
     var biography by remember { mutableStateOf("") }
@@ -63,22 +97,12 @@ fun ProfileScreen(
 
     val user = supabase.auth.currentUserOrNull()
 
-    // =========================================================
-    // LOAD PROFILE DATA
-    // =========================================================
-
     LaunchedEffect(user?.id) {
-
         if (user == null) {
             return@LaunchedEffect
         }
 
         try {
-
-            // -------------------------------------------------
-            // Load profile
-            // -------------------------------------------------
-
             val profile = supabase
                 .from("profiles")
                 .select {
@@ -90,45 +114,34 @@ fun ProfileScreen(
                 .firstOrNull()
 
             if (profile != null) {
+                fullName = profile["full_name"]
+                    ?.jsonPrimitive
+                    ?.content
+                    ?.takeIf { it.isNotBlank() }
+                    ?: "User"
 
-                fullName =
-                    profile["full_name"]
-                        ?.jsonPrimitive
-                        ?.content
-                        ?.takeIf { it.isNotBlank() }
-                        ?: "User"
+                email = profile["email"]
+                    ?.jsonPrimitive
+                    ?.content
+                    ?.takeIf { it.isNotBlank() }
+                    ?: user.email
+                            ?: ""
 
-                email =
-                    profile["email"]
-                        ?.jsonPrimitive
-                        ?.content
-                        ?.takeIf { it.isNotBlank() }
-                        ?: user.email
-                                ?: ""
+                biography = profile["biography"]
+                    ?.jsonPrimitive
+                    ?.content
+                    ?: ""
 
-                biography =
-                    profile["biography"]
-                        ?.jsonPrimitive
-                        ?.content
-                        ?: ""
-
-                location =
-                    profile["location"]
-                        ?.jsonPrimitive
-                        ?.content
-                        ?: ""
-
+                location = profile["location"]
+                    ?.jsonPrimitive
+                    ?.content
+                    ?: ""
             } else {
-
                 fullName = "User"
                 email = user.email ?: ""
                 biography = ""
                 location = ""
             }
-
-            // -------------------------------------------------
-            // Load roadmap count
-            // -------------------------------------------------
 
             val roadmaps = supabase
                 .from("roadmaps")
@@ -141,10 +154,6 @@ fun ProfileScreen(
 
             roadmapCount = roadmaps.size
 
-            // -------------------------------------------------
-            // Load skills count
-            // -------------------------------------------------
-
             val skills = supabase
                 .from("user_skills")
                 .select {
@@ -155,31 +164,17 @@ fun ProfileScreen(
                 .decodeList<JsonObject>()
 
             skillsCount = skills.size
-
         } catch (e: Exception) {
-
-            println(
-                "Profile loading error: ${e.message}"
-            )
+            println("Profile loading error: ${e.message}")
         }
     }
-
-    // =========================================================
-    // INITIALS
-    // =========================================================
 
     val initials = fullName
         .trim()
         .split(" ")
         .filter { it.isNotBlank() }
         .take(2)
-        .joinToString("") {
-            it.first().uppercase()
-        }
-
-    // =========================================================
-    // SCREEN
-    // =========================================================
+        .joinToString("") { it.first().uppercase() }
 
     Column(
         modifier = Modifier
@@ -192,11 +187,7 @@ fun ProfileScreen(
             ),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-
-        // =====================================================
-        // PROFILE PICTURE
-        // =====================================================
-
+        // Profile picture
         Box(
             modifier = Modifier
                 .size(112.dp)
@@ -204,7 +195,6 @@ fun ProfileScreen(
                 .background(SkillLinkLightPurple),
             contentAlignment = Alignment.Center
         ) {
-
             Box(
                 modifier = Modifier
                     .size(92.dp)
@@ -212,21 +202,17 @@ fun ProfileScreen(
                     .background(SkillLinkPurple),
                 contentAlignment = Alignment.Center
             ) {
-
                 if (initials.isNotEmpty()) {
-
                     Text(
                         text = initials,
                         color = Color.White,
                         fontSize = 30.sp,
                         fontWeight = FontWeight.Bold
                     )
-
                 } else {
-
                     Icon(
                         imageVector = Icons.Default.Person,
-                        contentDescription = "Profile",
+                        contentDescription = profileScreenText("Profile picture"),
                         modifier = Modifier.size(42.dp),
                         tint = Color.White
                     )
@@ -234,14 +220,9 @@ fun ProfileScreen(
             }
         }
 
-        Spacer(
-            modifier = Modifier.height(16.dp)
-        )
+        Spacer(modifier = Modifier.height(16.dp))
 
-        // =====================================================
-        // NAME
-        // =====================================================
-
+        // Name
         Text(
             text = fullName,
             fontSize = 25.sp,
@@ -249,42 +230,28 @@ fun ProfileScreen(
             color = SkillLinkNavy
         )
 
-        Spacer(
-            modifier = Modifier.height(5.dp)
-        )
+        Spacer(modifier = Modifier.height(5.dp))
 
-        // =====================================================
-        // EMAIL
-        // =====================================================
-
+        // Email
         Text(
             text = email,
             fontSize = 14.sp,
             color = Color(0xFF85849A)
         )
 
-        Spacer(
-            modifier = Modifier.height(26.dp)
-        )
+        Spacer(modifier = Modifier.height(26.dp))
 
-        // =====================================================
-        // BIO
-        // =====================================================
-
+        // Biography
         if (biography.isNotBlank()) {
-
             ProfileSectionCard {
-
                 Text(
-                    text = "About me",
+                    text = profileScreenText("About me"),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = SkillLinkNavy
                 )
 
-                Spacer(
-                    modifier = Modifier.height(9.dp)
-                )
+                Spacer(modifier = Modifier.height(9.dp))
 
                 Text(
                     text = biography,
@@ -294,24 +261,16 @@ fun ProfileScreen(
                 )
             }
 
-            Spacer(
-                modifier = Modifier.height(14.dp)
-            )
+            Spacer(modifier = Modifier.height(14.dp))
         }
 
-        // =====================================================
-        // LOCATION
-        // =====================================================
-
+        // Location
         if (location.isNotBlank()) {
-
             ProfileSectionCard {
-
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-
                     Box(
                         modifier = Modifier
                             .size(42.dp)
@@ -319,30 +278,24 @@ fun ProfileScreen(
                             .background(SkillLinkLightPurple),
                         contentAlignment = Alignment.Center
                     ) {
-
                         Icon(
                             imageVector = Icons.Default.LocationOn,
-                            contentDescription = "Location",
+                            contentDescription = profileScreenText("Location"),
                             tint = SkillLinkPurple,
                             modifier = Modifier.size(21.dp)
                         )
                     }
 
-                    Spacer(
-                        modifier = Modifier.size(13.dp)
-                    )
+                    Spacer(modifier = Modifier.width(13.dp))
 
                     Column {
-
                         Text(
-                            text = "Location",
+                            text = profileScreenText("Location"),
                             fontSize = 12.sp,
                             color = Color(0xFF85849A)
                         )
 
-                        Spacer(
-                            modifier = Modifier.height(3.dp)
-                        )
+                        Spacer(modifier = Modifier.height(3.dp))
 
                         Text(
                             text = location,
@@ -354,47 +307,36 @@ fun ProfileScreen(
                 }
             }
 
-            Spacer(
-                modifier = Modifier.height(20.dp)
-            )
+            Spacer(modifier = Modifier.height(20.dp))
         }
 
-        // =====================================================
-        // STATISTICS
-        // =====================================================
-
+        // Statistics
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-
             ProfileStatCard(
-                title = "Roadmaps",
+                title = profileScreenText("Roadmaps"),
                 value = roadmapCount.toString(),
                 modifier = Modifier.weight(1f)
             )
 
             ProfileStatCard(
-                title = "Skills",
+                title = profileScreenText("Skills"),
                 value = skillsCount.toString(),
                 modifier = Modifier.weight(1f)
             )
 
             ProfileStatCard(
-                title = "Day streak",
+                title = profileScreenText("Day streak"),
                 value = "0",
                 modifier = Modifier.weight(1f)
             )
         }
 
-        Spacer(
-            modifier = Modifier.height(22.dp)
-        )
+        Spacer(modifier = Modifier.height(22.dp))
 
-        // =====================================================
-        // EDIT PROFILE
-        // =====================================================
-
+        // Edit profile
         Button(
             onClick = onEditProfile,
             modifier = Modifier
@@ -405,40 +347,29 @@ fun ProfileScreen(
                 containerColor = SkillLinkPurple
             )
         ) {
-
             Icon(
                 imageVector = Icons.Default.Edit,
-                contentDescription = "Edit profile",
+                contentDescription = profileScreenText("Edit profile"),
                 modifier = Modifier.size(19.dp)
             )
 
-            Spacer(
-                modifier = Modifier.size(8.dp)
-            )
+            Spacer(modifier = Modifier.size(8.dp))
 
             Text(
-                text = "Edit Profile",
+                text = profileScreenText("Edit Profile"),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold
             )
         }
 
-        Spacer(
-            modifier = Modifier.height(20.dp)
-        )
+        Spacer(modifier = Modifier.height(20.dp))
     }
 }
-
-
-// =============================================================
-// PROFILE SECTION CARD
-// =============================================================
 
 @Composable
 private fun ProfileSectionCard(
     content: @Composable () -> Unit
 ) {
-
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -449,20 +380,13 @@ private fun ProfileSectionCard(
             defaultElevation = 0.dp
         )
     ) {
-
         Column(
             modifier = Modifier.padding(18.dp)
         ) {
-
             content()
         }
     }
 }
-
-
-// =============================================================
-// PROFILE STAT CARD
-// =============================================================
 
 @Composable
 private fun ProfileStatCard(
@@ -470,7 +394,6 @@ private fun ProfileStatCard(
     value: String,
     modifier: Modifier = Modifier
 ) {
-
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(18.dp),
@@ -481,7 +404,6 @@ private fun ProfileStatCard(
             defaultElevation = 0.dp
         )
     ) {
-
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -491,7 +413,6 @@ private fun ProfileStatCard(
                 ),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
             Text(
                 text = value,
                 fontSize = 22.sp,
@@ -499,9 +420,7 @@ private fun ProfileStatCard(
                 color = SkillLinkPurple
             )
 
-            Spacer(
-                modifier = Modifier.height(5.dp)
-            )
+            Spacer(modifier = Modifier.height(5.dp))
 
             Text(
                 text = title,

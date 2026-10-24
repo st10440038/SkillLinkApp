@@ -1,7 +1,6 @@
+
 package com.example.skilllinkapp.screens
 
-import androidx.compose.material3.Switch
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -37,9 +36,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.skilllinkapp.LanguageSupport
 import com.example.skilllinkapp.data.supabase
 import com.example.skilllinkapp.ui.theme.SkillLinkBackground
 import com.example.skilllinkapp.ui.theme.SkillLinkLightPurple
@@ -48,37 +49,133 @@ import com.example.skilllinkapp.ui.theme.SkillLinkPurple
 import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.launch
 
+private fun settingsText(english: String): String {
+    return when (LanguageSupport.currentLanguage.value) {
+        LanguageSupport.AFRIKAANS -> when (english) {
+            "Settings" -> "Instellings"
+            "Manage your SkillLink experience" -> "Bestuur jou SkillLink-ervaring"
+            "Your account" -> "Jou rekening"
+            "Update your profile information" -> "Werk jou profielinligting by"
+            "ACCOUNT" -> "REKENING"
+            "Edit profile" -> "Wysig profiel"
+            "Update your personal details" -> "Werk jou persoonlike besonderhede by"
+            "Change password" -> "Verander wagwoord"
+            "Keep your account secure" -> "Hou jou rekening veilig"
+            "PREFERENCES" -> "VOORKEURE"
+            "Language" -> "Taal"
+            "Notifications" -> "Kennisgewings"
+            "Manage learning alerts" -> "Bestuur leerkennisgewings"
+            "Dark mode" -> "Donker modus"
+            "Coming soon" -> "Kom binnekort"
+            "SUPPORT" -> "ONDERSTEUNING"
+            "Help & support" -> "Hulp en ondersteuning"
+            "Get help with SkillLink" -> "Kry hulp met SkillLink"
+            "Log out" -> "Meld af"
+            "Sign out of your SkillLink account" -> "Meld af by jou SkillLink-rekening"
+            "Teach. Learn. Connect." -> "Leer. Onderrig. Verbind."
+            "We'll send a secure password reset link to:" ->
+                "Ons sal 'n veilige wagwoordterstelskakel stuur na:"
+            "Your registered email" -> "Jou geregistreerde e-posadres"
+            "We couldn't find an email address for this account." ->
+                "Ons kon nie 'n e-posadres vir hierdie rekening vind nie."
+            "Password reset email sent. Check your inbox and follow the link to create a new password." ->
+                "Die wagwoordterstel-e-pos is gestuur. Gaan jou inkassie na en volg die skakel om 'n nuwe wagwoord te skep."
+            "Unable to send the password reset email." ->
+                "Kon nie die wagwoordterstel-e-pos stuur nie."
+            "Send reset link" -> "Stuur herstel skakel"
+            "Cancel" -> "Kanselleer"
+            "How do I create a roadmap?" -> "Hoe skep ek 'n leerplan?"
+            "Open the Roadmap section, enter your learning goal and preferences, then select Generate Roadmap." ->
+                "Maak die Leerplan-afdeling oop, voer jou leerdoel en voorkeure in, en kies dan Genereer leerplan."
+            "Where are my roadmaps saved?" -> "Waar word my leerplanne gestoor?"
+            "Your generated roadmaps are saved to your SkillLink account and can be accessed from My Learning." ->
+                "Jou gegenereerde leerplanne word in jou SkillLink-rekening gestoor en kan onder My Leerwerk oopgemaak word."
+            "How do I track my progress?" -> "Hoe volg ek my vordering?"
+            "Open a roadmap from My Learning and mark lessons as completed. Your progress is saved automatically." ->
+                "Maak 'n leerplan onder My Leerwerk oop en merk lesse as voltooi. Jou vordering word outomaties gestoor."
+            "How do I update my profile?" -> "Hoe werk ek my profiel by?"
+            "Open Profile or Settings, then select Edit profile." ->
+                "Maak Profiel of Instellings oop en kies dan Wysig profiel."
+            "Still need help?" -> "Het jy steeds hulp nodig?"
+            "If you encounter a problem that isn't covered here, contact the SkillLink support team." ->
+                "As jy 'n probleem ondervind wat nie hier bespreek word nie, kontak die SkillLink-ondersteuningspan."
+            "Done" -> "Klaar"
+            else -> english
+        }
+
+        LanguageSupport.ZULU -> when (english) {
+            "Settings" -> "Izilungiselelo"
+            "Manage your SkillLink experience" -> "Phatha indlela osebenzisa ngayo i-SkillLink"
+            "Your account" -> "I-akhawunti yakho"
+            "Update your profile information" -> "Buyekeza imininingwane yephrofayela yakho"
+            "ACCOUNT" -> "I-AKHAWUNTI"
+            "Edit profile" -> "Hlela iphrofayela"
+            "Update your personal details" -> "Buyekeza imininingwane yakho"
+            "Change password" -> "Shintsha iphasiwedi"
+            "Keep your account secure" -> "Vikela i-akhawunti yakho"
+            "PREFERENCES" -> "IZINTANDOKAZI"
+            "Language" -> "Ulimi"
+            "Notifications" -> "Izaziso"
+            "Manage learning alerts" -> "Phatha izaziso zokufunda"
+            "Dark mode" -> "Imodi emnyama"
+            "Coming soon" -> "Iyeza maduze"
+            "SUPPORT" -> "USIZO"
+            "Help & support" -> "Usizo nokwesekwa"
+            "Get help with SkillLink" -> "Thola usizo nge-SkillLink"
+            "Log out" -> "Phuma"
+            "Sign out of your SkillLink account" -> "Phuma ku-akhawunti yakho ye-SkillLink"
+            "Teach. Learn. Connect." -> "Fundisa. Funda. Xhumana."
+            "We'll send a secure password reset link to:" ->
+                "Sizothumela isixhumanisi esivikelekile sokusetha kabusha iphasiwedi ku:"
+            "Your registered email" -> "I-imeyili yakho ebhalisiwe"
+            "We couldn't find an email address for this account." ->
+                "Asikwazanga ukuthola ikheli le-imeyili lale akhawunti."
+            "Password reset email sent. Check your inbox and follow the link to create a new password." ->
+                "I-imeyili yokusetha kabusha iphasiwedi ithunyelwe. Hlola ibhokisi lakho lokungenayo bese ulandela isixhumanisi ukuze wakhe iphasiwedi entsha."
+            "Unable to send the password reset email." ->
+                "Ayikwazanga ukuthumela i-imeyili yokusetha kabusha iphasiwedi."
+            "Send reset link" -> "Thumela isixhumanisi sokusetha kabusha"
+            "Cancel" -> "Khansela"
+            "How do I create a roadmap?" -> "Ngiyenza kanjani indlela yokufunda?"
+            "Open the Roadmap section, enter your learning goal and preferences, then select Generate Roadmap." ->
+                "Vula isigaba se-Roadmap, faka umgomo wakho wokufunda nezintandokazi zakho, bese ukhetha u-Generate Roadmap."
+            "Where are my roadmaps saved?" -> "Zigcinwa kuphi izindlela zami zokufunda?"
+            "Your generated roadmaps are saved to your SkillLink account and can be accessed from My Learning." ->
+                "Izindlela zakho zokufunda zigcinwa ku-akhawunti yakho ye-SkillLink futhi ungazithola ku-My Learning."
+            "How do I track my progress?" -> "Ngikulandelela kanjani ukuqhubeka kwami?"
+            "Open a roadmap from My Learning and mark lessons as completed. Your progress is saved automatically." ->
+                "Vula indlela yokufunda ku-My Learning bese umaka izifundo oziqedile. Ukuqhubeka kwakho kugcinwa ngokuzenzakalela."
+            "How do I update my profile?" -> "Ngiyibuyekeza kanjani iphrofayela yami?"
+            "Open Profile or Settings, then select Edit profile." ->
+                "Vula i-Profile noma i-Settings, bese ukhetha u-Edit profile."
+            "Still need help?" -> "Usaludinga usizo?"
+            "If you encounter a problem that isn't covered here, contact the SkillLink support team." ->
+                "Uma uhlangabezana nenkinga engachazwanga lapha, xhumana nethimba losekelo le-SkillLink."
+            "Done" -> "Kwenziwe"
+            else -> english
+        }
+
+        else -> english
+    }
+}
+
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
     onLogout: () -> Unit,
     onEditProfile: () -> Unit = {}
 ) {
-
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
-    var showPasswordDialog by remember {
-        mutableStateOf(false)
-    }
-
-    var showHelpDialog by remember {
-        mutableStateOf(false)
-    }
-
-    var passwordLoading by remember {
-        mutableStateOf(false)
-    }
-
-    var passwordMessage by remember {
-        mutableStateOf("")
-    }
-
-    var passwordError by remember {
-        mutableStateOf(false)
-    }
+    var showPasswordDialog by remember { mutableStateOf(false) }
+    var showHelpDialog by remember { mutableStateOf(false) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
+    var passwordLoading by remember { mutableStateOf(false) }
+    var passwordMessage by remember { mutableStateOf("") }
+    var passwordError by remember { mutableStateOf(false) }
 
     val currentUser = supabase.auth.currentUserOrNull()
-
     val currentEmail = currentUser?.email ?: ""
 
     Column(
@@ -86,35 +183,20 @@ fun SettingsScreen(
             .fillMaxSize()
             .background(SkillLinkBackground)
             .verticalScroll(rememberScrollState())
-            .padding(
-                horizontal = 22.dp,
-                vertical = 24.dp
-            )
+            .padding(horizontal = 22.dp, vertical = 24.dp)
     ) {
-
-        // =====================================================
-        // HEADER
-        // =====================================================
-
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-
             Surface(
                 modifier = Modifier
                     .size(42.dp)
-                    .clickable {
-                        onBack()
-                    },
+                    .clickable { onBack() },
                 shape = RoundedCornerShape(13.dp),
                 color = Color.White
             ) {
-
-                Box(
-                    contentAlignment = Alignment.Center
-                ) {
-
+                Box(contentAlignment = Alignment.Center) {
                     Text(
                         text = "‹",
                         color = SkillLinkNavy,
@@ -124,50 +206,36 @@ fun SettingsScreen(
                 }
             }
 
-            Spacer(
-                modifier = Modifier.size(14.dp)
-            )
+            Spacer(modifier = Modifier.size(14.dp))
 
             Column {
-
                 Text(
-                    text = "Settings",
+                    text = settingsText("Settings"),
                     style = MaterialTheme.typography.headlineSmall,
                     color = SkillLinkNavy,
                     fontWeight = FontWeight.Bold
                 )
-
                 Text(
-                    text = "Manage your SkillLink experience",
+                    text = settingsText("Manage your SkillLink experience"),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFF85849A)
                 )
             }
         }
 
-        Spacer(
-            modifier = Modifier.height(28.dp)
-        )
-
-        // =====================================================
-        // ACCOUNT CARD
-        // =====================================================
+        Spacer(modifier = Modifier.height(28.dp))
 
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable {
-                    onEditProfile()
-                },
+                .clickable { onEditProfile() },
             shape = RoundedCornerShape(22.dp),
             color = SkillLinkPurple
         ) {
-
             Row(
                 modifier = Modifier.padding(20.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-
                 Box(
                     modifier = Modifier
                         .size(58.dp)
@@ -175,7 +243,6 @@ fun SettingsScreen(
                         .background(Color.White),
                     contentAlignment = Alignment.Center
                 ) {
-
                     Text(
                         text = "S",
                         color = SkillLinkPurple,
@@ -184,27 +251,18 @@ fun SettingsScreen(
                     )
                 }
 
-                Spacer(
-                    modifier = Modifier.size(16.dp)
-                )
+                Spacer(modifier = Modifier.size(16.dp))
 
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
-
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Your account",
+                        text = settingsText("Your account"),
                         color = Color.White,
                         fontSize = 17.sp,
                         fontWeight = FontWeight.Bold
                     )
-
-                    Spacer(
-                        modifier = Modifier.height(3.dp)
-                    )
-
+                    Spacer(modifier = Modifier.height(3.dp))
                     Text(
-                        text = "Update your profile information",
+                        text = settingsText("Update your profile information"),
                         color = Color.White.copy(alpha = 0.78f),
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -218,28 +276,16 @@ fun SettingsScreen(
             }
         }
 
-        Spacer(
-            modifier = Modifier.height(30.dp)
-        )
+        Spacer(modifier = Modifier.height(30.dp))
 
-        // =====================================================
-        // ACCOUNT
-        // =====================================================
-
-        SettingsSectionTitle(
-            text = "ACCOUNT"
-        )
-
-        Spacer(
-            modifier = Modifier.height(12.dp)
-        )
+        SettingsSectionTitle(text = settingsText("ACCOUNT"))
+        Spacer(modifier = Modifier.height(12.dp))
 
         SettingsGroup {
-
             SettingsItem(
                 icon = "○",
-                title = "Edit profile",
-                subtitle = "Update your personal details",
+                title = settingsText("Edit profile"),
+                subtitle = settingsText("Update your personal details"),
                 onClick = onEditProfile
             )
 
@@ -247,8 +293,8 @@ fun SettingsScreen(
 
             SettingsItem(
                 icon = "⌁",
-                title = "Change password",
-                subtitle = "Keep your account secure",
+                title = settingsText("Change password"),
+                subtitle = settingsText("Keep your account secure"),
                 onClick = {
                     passwordMessage = ""
                     passwordError = false
@@ -257,102 +303,65 @@ fun SettingsScreen(
             )
         }
 
-        Spacer(
-            modifier = Modifier.height(28.dp)
-        )
+        Spacer(modifier = Modifier.height(28.dp))
 
-        // =====================================================
-        // PREFERENCES
-        // =====================================================
-
-        SettingsSectionTitle(
-            text = "PREFERENCES"
-        )
-
-        Spacer(
-            modifier = Modifier.height(12.dp)
-        )
+        SettingsSectionTitle(text = settingsText("PREFERENCES"))
+        Spacer(modifier = Modifier.height(12.dp))
 
         SettingsGroup {
-
             SettingsItem(
                 icon = "文",
-                title = "Language",
-                subtitle = "English",
-                onClick = {
-                    // Future feature
-                }
+                title = settingsText("Language"),
+                subtitle = when (LanguageSupport.currentLanguage.value) {
+                    LanguageSupport.ZULU -> "isiZulu"
+                    LanguageSupport.AFRIKAANS -> "Afrikaans"
+                    else -> "English"
+                },
+                onClick = { showLanguageDialog = true }
             )
 
             SettingsDivider()
 
             SettingsItem(
                 icon = "♧",
-                title = "Notifications",
-                subtitle = "Manage learning alerts",
-                onClick = {
-                    // Future feature
-                }
+                title = settingsText("Notifications"),
+                subtitle = settingsText("Manage learning alerts"),
+                onClick = { /* Future feature */ }
             )
 
             SettingsDivider()
 
             SettingsItem(
                 icon = "◐",
-                title = "Dark mode",
-                subtitle = "Coming soon",
-                onClick = {
-                    // Future feature
-                }
+                title = settingsText("Dark mode"),
+                subtitle = settingsText("Coming soon"),
+                onClick = { /* Future feature */ }
             )
         }
 
-        Spacer(
-            modifier = Modifier.height(28.dp)
-        )
+        Spacer(modifier = Modifier.height(28.dp))
 
-        // =====================================================
-        // SUPPORT
-        // =====================================================
-
-        SettingsSectionTitle(
-            text = "SUPPORT"
-        )
-
-        Spacer(
-            modifier = Modifier.height(12.dp)
-        )
+        SettingsSectionTitle(text = settingsText("SUPPORT"))
+        Spacer(modifier = Modifier.height(12.dp))
 
         SettingsGroup {
-
             SettingsItem(
                 icon = "?",
-                title = "Help & support",
-                subtitle = "Get help with SkillLink",
-                onClick = {
-                    showHelpDialog = true
-                }
+                title = settingsText("Help & support"),
+                subtitle = settingsText("Get help with SkillLink"),
+                onClick = { showHelpDialog = true }
             )
         }
 
-        Spacer(
-            modifier = Modifier.height(28.dp)
-        )
-
-        // =====================================================
-        // LOGOUT
-        // =====================================================
+        Spacer(modifier = Modifier.height(28.dp))
 
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable {
-                    onLogout()
-                },
+                .clickable { onLogout() },
             shape = RoundedCornerShape(18.dp),
             color = Color(0xFFFFF1F2)
         ) {
-
             Row(
                 modifier = Modifier.padding(
                     horizontal = 18.dp,
@@ -360,7 +369,6 @@ fun SettingsScreen(
                 ),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-
                 Box(
                     modifier = Modifier
                         .size(42.dp)
@@ -368,7 +376,6 @@ fun SettingsScreen(
                         .background(Color(0xFFFFDDE1)),
                     contentAlignment = Alignment.Center
                 ) {
-
                     Text(
                         text = "↪",
                         color = Color(0xFFE54858),
@@ -376,27 +383,18 @@ fun SettingsScreen(
                     )
                 }
 
-                Spacer(
-                    modifier = Modifier.size(14.dp)
-                )
+                Spacer(modifier = Modifier.size(14.dp))
 
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
-
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Log out",
+                        text = settingsText("Log out"),
                         color = Color(0xFFE54858),
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold
                     )
-
-                    Spacer(
-                        modifier = Modifier.height(2.dp)
-                    )
-
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "Sign out of your SkillLink account",
+                        text = settingsText("Sign out of your SkillLink account"),
                         color = Color(0xFFB66A72),
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -410,19 +408,12 @@ fun SettingsScreen(
             }
         }
 
-        Spacer(
-            modifier = Modifier.height(24.dp)
-        )
-
-        // =====================================================
-        // VERSION
-        // =====================================================
+        Spacer(modifier = Modifier.height(24.dp))
 
         Box(
             modifier = Modifier.fillMaxWidth(),
             contentAlignment = Alignment.Center
         ) {
-
             Text(
                 text = "SkillLink",
                 color = Color(0xFFAAA7B8),
@@ -431,71 +422,56 @@ fun SettingsScreen(
             )
         }
 
-        Spacer(
-            modifier = Modifier.height(6.dp)
-        )
+        Spacer(modifier = Modifier.height(6.dp))
 
         Box(
             modifier = Modifier.fillMaxWidth(),
             contentAlignment = Alignment.Center
         ) {
-
             Text(
-                text = "Teach. Learn. Connect.",
+                text = settingsText("Teach. Learn. Connect."),
                 color = Color(0xFFC0BDCA),
                 fontSize = 11.sp
             )
         }
 
-        Spacer(
-            modifier = Modifier.height(10.dp)
-        )
+        Spacer(modifier = Modifier.height(10.dp))
     }
 
-    // =========================================================
     // CHANGE PASSWORD DIALOG
-    // =========================================================
 
     if (showPasswordDialog) {
-
         AlertDialog(
             onDismissRequest = {
-                if (!passwordLoading) {
-                    showPasswordDialog = false
-                }
+                if (!passwordLoading) showPasswordDialog = false
             },
-
             title = {
                 Text(
-                    text = "Change password",
+                    text = settingsText("Change password"),
                     fontWeight = FontWeight.Bold,
                     color = SkillLinkNavy
                 )
             },
-
             text = {
-
                 Column {
-
                     Text(
-                        text = "We'll send a secure password reset link to:",
+                        text = settingsText(
+                            "We'll send a secure password reset link to:"
+                        ),
                         color = Color(0xFF85849A),
                         fontSize = 14.sp
                     )
 
-                    Spacer(
-                        modifier = Modifier.height(10.dp)
-                    )
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         color = SkillLinkLightPurple
                     ) {
-
                         Text(
                             text = currentEmail.ifBlank {
-                                "Your registered email"
+                                settingsText("Your registered email")
                             },
                             modifier = Modifier.padding(12.dp),
                             color = SkillLinkNavy,
@@ -505,11 +481,7 @@ fun SettingsScreen(
                     }
 
                     if (passwordMessage.isNotBlank()) {
-
-                        Spacer(
-                            modifier = Modifier.height(14.dp)
-                        )
-
+                        Spacer(modifier = Modifier.height(14.dp))
                         Text(
                             text = passwordMessage,
                             color = if (passwordError) {
@@ -522,83 +494,64 @@ fun SettingsScreen(
                     }
                 }
             },
-
             confirmButton = {
-
                 Button(
                     onClick = {
-
                         if (currentEmail.isBlank()) {
-
                             passwordError = true
-                            passwordMessage =
+                            passwordMessage = settingsText(
                                 "We couldn't find an email address for this account."
-
+                            )
                             return@Button
                         }
 
                         scope.launch {
-
                             passwordLoading = true
                             passwordMessage = ""
                             passwordError = false
 
                             try {
-
                                 supabase.auth.resetPasswordForEmail(
                                     email = currentEmail
                                 )
-
                                 passwordLoading = false
                                 passwordError = false
-                                passwordMessage =
+                                passwordMessage = settingsText(
                                     "Password reset email sent. Check your inbox and follow the link to create a new password."
-
+                                )
                             } catch (e: Exception) {
-
                                 passwordLoading = false
                                 passwordError = true
-                                passwordMessage =
-                                    e.message ?: "Unable to send the password reset email."
+                                passwordMessage = e.message
+                                    ?: settingsText(
+                                        "Unable to send the password reset email."
+                                    )
                             }
                         }
                     },
-
                     enabled = !passwordLoading,
-
                     colors = ButtonDefaults.buttonColors(
                         containerColor = SkillLinkPurple
                     )
                 ) {
-
                     if (passwordLoading) {
-
                         CircularProgressIndicator(
                             modifier = Modifier.size(18.dp),
                             color = Color.White,
                             strokeWidth = 2.dp
                         )
-
                     } else {
-
-                        Text(
-                            text = "Send reset link"
-                        )
+                        Text(text = settingsText("Send reset link"))
                     }
                 }
             },
-
             dismissButton = {
-
                 TextButton(
-                    onClick = {
-                        showPasswordDialog = false
-                    },
+                    onClick = { showPasswordDialog = false },
                     enabled = !passwordLoading
                 ) {
-
                     Text(
-                        text = "Cancel",
+                        text = settingsText("Cancel"),
                         color = SkillLinkPurple
                     )
                 }
@@ -606,68 +559,58 @@ fun SettingsScreen(
         )
     }
 
-    // =========================================================
     // HELP & SUPPORT DIALOG
-    // =========================================================
 
     if (showHelpDialog) {
-
         AlertDialog(
-            onDismissRequest = {
-                showHelpDialog = false
-            },
-
+            onDismissRequest = { showHelpDialog = false },
             title = {
                 Text(
-                    text = "Help & support",
+                    text = settingsText("Help & support"),
                     color = SkillLinkNavy,
                     fontWeight = FontWeight.Bold
                 )
             },
-
             text = {
-
                 Column(
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-
                     HelpItem(
-                        question = "How do I create a roadmap?",
-                        answer = "Open the Roadmap section, enter your learning goal and preferences, then select Generate Roadmap."
+                        question = settingsText("How do I create a roadmap?"),
+                        answer = settingsText(
+                            "Open the Roadmap section, enter your learning goal and preferences, then select Generate Roadmap."
+                        )
                     )
-
                     HelpItem(
-                        question = "Where are my roadmaps saved?",
-                        answer = "Your generated roadmaps are saved to your SkillLink account and can be accessed from My Learning."
+                        question = settingsText("Where are my roadmaps saved?"),
+                        answer = settingsText(
+                            "Your generated roadmaps are saved to your SkillLink account and can be accessed from My Learning."
+                        )
                     )
-
                     HelpItem(
-                        question = "How do I track my progress?",
-                        answer = "Open a roadmap from My Learning and mark lessons as completed. Your progress is saved automatically."
+                        question = settingsText("How do I track my progress?"),
+                        answer = settingsText(
+                            "Open a roadmap from My Learning and mark lessons as completed. Your progress is saved automatically."
+                        )
                     )
-
                     HelpItem(
-                        question = "How do I update my profile?",
-                        answer = "Open Profile or Settings, then select Edit profile."
+                        question = settingsText("How do I update my profile?"),
+                        answer = settingsText(
+                            "Open Profile or Settings, then select Edit profile."
+                        )
                     )
-
                     HelpItem(
-                        question = "Still need help?",
-                        answer = "If you encounter a problem that isn't covered here, contact the SkillLink support team."
+                        question = settingsText("Still need help?"),
+                        answer = settingsText(
+                            "If you encounter a problem that isn't covered here, contact the SkillLink support team."
+                        )
                     )
                 }
             },
-
             confirmButton = {
-
-                TextButton(
-                    onClick = {
-                        showHelpDialog = false
-                    }
-                ) {
-
+                TextButton(onClick = { showHelpDialog = false }) {
                     Text(
-                        text = "Done",
+                        text = settingsText("Done"),
                         color = SkillLinkPurple,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -675,32 +618,74 @@ fun SettingsScreen(
             }
         )
     }
+
+    // LANGUAGE SELECTION DIALOG
+
+    if (showLanguageDialog) {
+        AlertDialog(
+            onDismissRequest = { showLanguageDialog = false },
+            title = {
+                Text(
+                    text = settingsText("Language"),
+                    fontWeight = FontWeight.Bold,
+                    color = SkillLinkNavy
+                )
+            },
+            text = {
+                Column {
+                    listOf(
+                        LanguageSupport.ENGLISH to "English",
+                        LanguageSupport.ZULU to "isiZulu",
+                        LanguageSupport.AFRIKAANS to "Afrikaans"
+                    ).forEach { (code, label) ->
+                        TextButton(
+                            onClick = {
+                                LanguageSupport.set(
+                                    context = context,
+                                    language = code
+                                )
+                                showLanguageDialog = false
+                            }
+                        ) {
+                            Text(
+                                text = if (
+                                    LanguageSupport.currentLanguage.value == code
+                                ) {
+                                    "✓  $label"
+                                } else {
+                                    label
+                                },
+                                color = SkillLinkPurple
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showLanguageDialog = false }) {
+                    Text(
+                        text = settingsText("Done"),
+                        color = SkillLinkPurple
+                    )
+                }
+            }
+        )
+    }
 }
-
-
-// =============================================================
-// HELP ITEM
-// =============================================================
 
 @Composable
 private fun HelpItem(
     question: String,
     answer: String
 ) {
-
     Column {
-
         Text(
             text = question,
             color = SkillLinkNavy,
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold
         )
-
-        Spacer(
-            modifier = Modifier.height(3.dp)
-        )
-
+        Spacer(modifier = Modifier.height(3.dp))
         Text(
             text = answer,
             color = Color(0xFF85849A),
@@ -710,22 +695,15 @@ private fun HelpItem(
     }
 }
 
-
-// =============================================================
-// SETTINGS GROUP
-// =============================================================
-
 @Composable
 private fun SettingsGroup(
     content: @Composable ColumnScope.() -> Unit
 ) {
-
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         color = Color.White
     ) {
-
         Column(
             modifier = Modifier.padding(
                 horizontal = 16.dp,
@@ -736,16 +714,10 @@ private fun SettingsGroup(
     }
 }
 
-
-// =============================================================
-// SECTION TITLE
-// =============================================================
-
 @Composable
 private fun SettingsSectionTitle(
     text: String
 ) {
-
     Text(
         text = text,
         color = Color(0xFF85849A),
@@ -755,11 +727,6 @@ private fun SettingsSectionTitle(
     )
 }
 
-
-// =============================================================
-// SETTINGS ITEM
-// =============================================================
-
 @Composable
 private fun SettingsItem(
     icon: String,
@@ -767,19 +734,13 @@ private fun SettingsItem(
     subtitle: String,
     onClick: () -> Unit
 ) {
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable {
-                onClick()
-            }
-            .padding(
-                vertical = 14.dp
-            ),
+            .clickable { onClick() }
+            .padding(vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-
         Box(
             modifier = Modifier
                 .size(44.dp)
@@ -787,7 +748,6 @@ private fun SettingsItem(
                 .background(SkillLinkLightPurple),
             contentAlignment = Alignment.Center
         ) {
-
             Text(
                 text = icon,
                 color = SkillLinkPurple,
@@ -796,25 +756,16 @@ private fun SettingsItem(
             )
         }
 
-        Spacer(
-            modifier = Modifier.size(14.dp)
-        )
+        Spacer(modifier = Modifier.size(14.dp))
 
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
-
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
                 color = SkillLinkNavy,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold
             )
-
-            Spacer(
-                modifier = Modifier.height(3.dp)
-            )
-
+            Spacer(modifier = Modifier.height(3.dp))
             Text(
                 text = subtitle,
                 color = Color(0xFF85849A),
@@ -830,14 +781,8 @@ private fun SettingsItem(
     }
 }
 
-
-// =============================================================
-// DIVIDER
-// =============================================================
-
 @Composable
 private fun SettingsDivider() {
-
     Surface(
         modifier = Modifier
             .fillMaxWidth()

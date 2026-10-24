@@ -1,3 +1,4 @@
+
 package com.example.skilllinkapp.screens
 
 import androidx.activity.compose.BackHandler
@@ -18,8 +19,8 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,6 +37,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.skilllinkapp.LanguageSupport
 import com.example.skilllinkapp.data.supabase
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
@@ -43,6 +45,46 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+
+private fun editProfileText(english: String): String {
+    return when (LanguageSupport.currentLanguage.value) {
+        LanguageSupport.AFRIKAANS -> when (english) {
+            "Edit Profile" -> "Wysig profiel"
+            "Back" -> "Terug"
+            "Loading profile..." -> "Profiel word gelaai..."
+            "Profile picture" -> "Profielfoto"
+            "Full Name" -> "Volle naam"
+            "Enter your full name" -> "Voer jou volle naam in"
+            "Bio" -> "Biografie"
+            "Tell people a little about yourself" ->
+                "Vertel mense 'n bietjie van jouself"
+            "City / Location" -> "Stad / Ligging"
+            "e.g. Cape Town" -> "bv. Kaapstad"
+            "Saving..." -> "Stoor tans..."
+            "Save Changes" -> "Stoor veranderinge"
+            else -> english
+        }
+
+        LanguageSupport.ZULU -> when (english) {
+            "Edit Profile" -> "Hlela iphrofayela"
+            "Back" -> "Emuva"
+            "Loading profile..." -> "Iphrofayela iyalayishwa..."
+            "Profile picture" -> "Isithombe sephrofayela"
+            "Full Name" -> "Igama eligcwele"
+            "Enter your full name" -> "Faka igama lakho eligcwele"
+            "Bio" -> "Mayelana nawe"
+            "Tell people a little about yourself" ->
+                "Tshela abantu okuncane ngawe"
+            "City / Location" -> "Idolobha / Indawo"
+            "e.g. Cape Town" -> "isb. eKapa"
+            "Saving..." -> "Kuyagcinwa..."
+            "Save Changes" -> "Gcina izinguquko"
+            else -> english
+        }
+
+        else -> english
+    }
+}
 
 @Composable
 fun EditProfileScreen(
@@ -59,18 +101,13 @@ fun EditProfileScreen(
     val coroutineScope = rememberCoroutineScope()
     val user = supabase.auth.currentUserOrNull()
 
-    // Android system back button
     BackHandler {
         onBack()
     }
 
-    // Load profile
     LaunchedEffect(Unit) {
-
         try {
-
             if (user != null) {
-
                 val profile = supabase
                     .from("profiles")
                     .select {
@@ -82,32 +119,24 @@ fun EditProfileScreen(
                     .firstOrNull()
 
                 if (profile != null) {
+                    fullName = profile["full_name"]
+                        ?.toString()
+                        ?.removeSurrounding("\"")
+                        ?: ""
 
-                    fullName =
-                        profile["full_name"]
-                            ?.toString()
-                            ?.removeSurrounding("\"")
-                            ?: ""
+                    biography = profile["biography"]
+                        ?.toString()
+                        ?.removeSurrounding("\"")
+                        ?: ""
 
-                    biography =
-                        profile["biography"]
-                            ?.toString()
-                            ?.removeSurrounding("\"")
-                            ?: ""
-
-                    location =
-                        profile["location"]
-                            ?.toString()
-                            ?.removeSurrounding("\"")
-                            ?: ""
+                    location = profile["location"]
+                        ?.toString()
+                        ?.removeSurrounding("\"")
+                        ?: ""
                 }
             }
-
         } catch (e: Exception) {
-
-            println(
-                "Edit profile loading error: ${e.message}"
-            )
+            println("Edit profile loading error: ${e.message}")
         }
 
         isLoading = false
@@ -118,9 +147,7 @@ fun EditProfileScreen(
         .split(" ")
         .filter { it.isNotBlank() }
         .take(2)
-        .joinToString("") {
-            it.first().uppercase()
-        }
+        .joinToString("") { it.first().uppercase() }
 
     Column(
         modifier = Modifier
@@ -128,101 +155,62 @@ fun EditProfileScreen(
             .background(Color(0xFFF5F2FF))
             .padding(20.dp)
     ) {
-
-        // =====================================================
-        // TOP BAR
-        // =====================================================
-
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-
-            IconButton(
-                onClick = {
-                    onBack()
-                }
-            ) {
-
+            IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "Back",
+                    contentDescription = editProfileText("Back"),
                     tint = Color(0xFF7656E8)
                 )
             }
 
             Text(
-                text = "Edit Profile",
+                text = editProfileText("Edit Profile"),
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF202035)
             )
         }
 
-        Spacer(
-            modifier = Modifier.height(20.dp)
-        )
-
-        // =====================================================
-        // LOADING
-        // =====================================================
+        Spacer(modifier = Modifier.height(20.dp))
 
         if (isLoading) {
-
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-
                 Text(
-                    text = "Loading profile...",
+                    text = editProfileText("Loading profile..."),
                     color = Color(0xFF85849A),
                     fontSize = 15.sp
                 )
             }
-
         } else {
-
-            // =================================================
-            // PROFILE IMAGE
-            // =================================================
-
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-
-                if (initials.isNotEmpty()) {
-
-                    Box(
-                        modifier = Modifier
-                            .size(100.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF7656E8)),
-                        contentAlignment = Alignment.Center
-                    ) {
-
+                Box(
+                    modifier = Modifier
+                        .size(100.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF7656E8)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (initials.isNotEmpty()) {
                         Text(
                             text = initials,
                             color = Color.White,
                             fontSize = 32.sp,
                             fontWeight = FontWeight.Bold
                         )
-                    }
-
-                } else {
-
-                    Box(
-                        modifier = Modifier
-                            .size(100.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF7656E8)),
-                        contentAlignment = Alignment.Center
-                    ) {
-
+                    } else {
                         Icon(
                             imageVector = Icons.Default.Person,
-                            contentDescription = "Profile picture",
+                            contentDescription = editProfileText("Profile picture"),
                             modifier = Modifier.size(50.dp),
                             tint = Color.White
                         )
@@ -230,187 +218,125 @@ fun EditProfileScreen(
                 }
             }
 
-            Spacer(
-                modifier = Modifier.height(28.dp)
-            )
-
-            // =================================================
-            // FULL NAME
-            // =================================================
+            Spacer(modifier = Modifier.height(28.dp))
 
             Text(
-                text = "Full Name",
+                text = editProfileText("Full Name"),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color(0xFF202035)
             )
 
-            Spacer(
-                modifier = Modifier.height(6.dp)
-            )
+            Spacer(modifier = Modifier.height(6.dp))
 
             OutlinedTextField(
                 value = fullName,
-                onValueChange = {
-                    fullName = it
-                },
+                onValueChange = { fullName = it },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
                 placeholder = {
-                    Text("Enter your full name")
+                    Text(editProfileText("Enter your full name"))
                 }
             )
 
-            Spacer(
-                modifier = Modifier.height(18.dp)
-            )
-
-            // =================================================
-            // BIO
-            // =================================================
+            Spacer(modifier = Modifier.height(18.dp))
 
             Text(
-                text = "Bio",
+                text = editProfileText("Bio"),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color(0xFF202035)
             )
 
-            Spacer(
-                modifier = Modifier.height(6.dp)
-            )
+            Spacer(modifier = Modifier.height(6.dp))
 
             OutlinedTextField(
                 value = biography,
-                onValueChange = {
-                    biography = it
-                },
+                onValueChange = { biography = it },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(120.dp),
                 shape = RoundedCornerShape(12.dp),
                 placeholder = {
                     Text(
-                        "Tell people a little about yourself"
+                        editProfileText(
+                            "Tell people a little about yourself"
+                        )
                     )
                 }
             )
 
-            Spacer(
-                modifier = Modifier.height(18.dp)
-            )
-
-            // =================================================
-            // LOCATION
-            // =================================================
+            Spacer(modifier = Modifier.height(18.dp))
 
             Text(
-                text = "City / Location",
+                text = editProfileText("City / Location"),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color(0xFF202035)
             )
 
-            Spacer(
-                modifier = Modifier.height(6.dp)
-            )
+            Spacer(modifier = Modifier.height(6.dp))
 
             OutlinedTextField(
                 value = location,
-                onValueChange = {
-                    location = it
-                },
+                onValueChange = { location = it },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
                 placeholder = {
-                    Text("e.g. Cape Town")
+                    Text(editProfileText("e.g. Cape Town"))
                 }
             )
 
-            Spacer(
-                modifier = Modifier.height(28.dp)
-            )
-
-            // =================================================
-            // SAVE
-            // =================================================
+            Spacer(modifier = Modifier.height(28.dp))
 
             Button(
                 onClick = {
-
                     if (user != null && !isSaving) {
-
                         isSaving = true
 
                         coroutineScope.launch {
-
                             try {
-
                                 supabase
                                     .from("profiles")
                                     .update(
                                         buildJsonObject {
-
-                                            put(
-                                                "full_name",
-                                                fullName.trim()
-                                            )
-
-                                            put(
-                                                "biography",
-                                                biography.trim()
-                                            )
-
-                                            put(
-                                                "location",
-                                                location.trim()
-                                            )
+                                            put("full_name", fullName.trim())
+                                            put("biography", biography.trim())
+                                            put("location", location.trim())
                                         }
                                     ) {
                                         filter {
-                                            eq(
-                                                "user_id",
-                                                user.id
-                                            )
+                                            eq("user_id", user.id)
                                         }
                                     }
 
                                 onSave()
-
                             } catch (e: Exception) {
-
                                 println(
                                     "Edit profile save error: ${e.message}"
                                 )
-
                             } finally {
-
                                 isSaving = false
                             }
                         }
                     }
                 },
-
                 enabled = !isSaving,
-
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
-
                 shape = RoundedCornerShape(14.dp),
-
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFF7656E8)
                 )
             ) {
-
                 Text(
                     text = if (isSaving) {
-                        "Saving..."
+                        editProfileText("Saving...")
                     } else {
-                        "Save Changes"
+                        editProfileText("Save Changes")
                     },
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold

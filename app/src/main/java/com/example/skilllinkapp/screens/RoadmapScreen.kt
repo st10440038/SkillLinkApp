@@ -35,6 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.skilllinkapp.LanguageSupport
 import com.example.skilllinkapp.data.ProgressRecord
 import com.example.skilllinkapp.data.ProgressRepository
 import com.example.skilllinkapp.data.supabase
@@ -113,15 +114,19 @@ fun RoadmapScreen(
                 )
             }
         } catch (e: Exception) {
-            errorMessage = e.message ?: "Could not load progress."
+            errorMessage = e.message
+                ?: roadmapScreenText("Could not load progress.")
         } finally {
             isLoadingProgress = false
         }
     }
 
-    val totalLessons = roadmap?.weeks?.sumOf { it.lessons.size } ?: 0
+    val totalLessons = roadmap?.weeks?.sumOf {
+        it.lessons.size
+    } ?: 0
 
-    val completedLessons = roadmap?.weeks?.flatMapIndexed { weekIndex, week ->
+    val completedLessons = roadmap?.weeks?.flatMapIndexed {
+            weekIndex, week ->
         week.lessons.mapIndexedNotNull { lessonIndex, _ ->
             val stepOrder = (weekIndex * 3) + lessonIndex + 1
 
@@ -133,7 +138,7 @@ fun RoadmapScreen(
 
     val progressPercentage =
         if (totalLessons > 0) {
-            (completedLessons.toFloat() / totalLessons.toFloat())
+            completedLessons.toFloat() / totalLessons.toFloat()
         } else {
             0f
         }
@@ -144,10 +149,7 @@ fun RoadmapScreen(
             .background(PageBackground)
             .verticalScroll(rememberScrollState())
     ) {
-
-        // ---------------------------------------------------------
         // TOP BAR
-        // ---------------------------------------------------------
 
         Row(
             modifier = Modifier
@@ -183,14 +185,16 @@ fun RoadmapScreen(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = "Learning roadmap",
+                    text = roadmapScreenText("Learning roadmap"),
                     style = MaterialTheme.typography.titleLarge,
                     color = SkillLinkNavy,
                     fontWeight = FontWeight.Bold
                 )
 
                 Text(
-                    text = "Your personalised learning journey",
+                    text = roadmapScreenText(
+                        "Your personalised learning journey"
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary
                 )
@@ -198,10 +202,7 @@ fun RoadmapScreen(
         }
 
         if (roadmap == null) {
-
-            // -----------------------------------------------------
             // EMPTY / INVALID STATE
-            // -----------------------------------------------------
 
             Column(
                 modifier = Modifier
@@ -229,7 +230,7 @@ fun RoadmapScreen(
                 Spacer(modifier = Modifier.height(20.dp))
 
                 Text(
-                    text = "No roadmap available",
+                    text = roadmapScreenText("No roadmap available"),
                     style = MaterialTheme.typography.headlineSmall,
                     color = SkillLinkNavy,
                     fontWeight = FontWeight.Bold
@@ -238,17 +239,15 @@ fun RoadmapScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "Your roadmap will appear here after it has been generated.",
+                    text = roadmapScreenText(
+                        "Your roadmap will appear here after it has been generated."
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary
                 )
             }
-
         } else {
-
-            // -----------------------------------------------------
             // HERO
-            // -----------------------------------------------------
 
             Column(
                 modifier = Modifier
@@ -258,7 +257,6 @@ fun RoadmapScreen(
                     .background(SkillLinkPurple)
                     .padding(22.dp)
             ) {
-
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -285,7 +283,7 @@ fun RoadmapScreen(
                         modifier = Modifier.weight(1f)
                     ) {
                         Text(
-                            text = "Your roadmap",
+                            text = roadmapScreenText("Your roadmap"),
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.White.copy(alpha = 0.78f)
                         )
@@ -310,9 +308,7 @@ fun RoadmapScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // -----------------------------------------------------
             // PROGRESS CARD
-            // -----------------------------------------------------
 
             Surface(
                 modifier = Modifier
@@ -325,17 +321,15 @@ fun RoadmapScreen(
                 Column(
                     modifier = Modifier.padding(18.dp)
                 ) {
-
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-
                         Column(
                             modifier = Modifier.weight(1f)
                         ) {
                             Text(
-                                text = "Your progress",
+                                text = roadmapScreenText("Your progress"),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = SkillLinkNavy,
                                 fontWeight = FontWeight.Bold
@@ -343,14 +337,31 @@ fun RoadmapScreen(
 
                             Spacer(modifier = Modifier.height(4.dp))
 
+                            val progressMessage = when {
+                                completedLessons == 0 ->
+                                    roadmapScreenText(
+                                        "Ready to get started?"
+                                    )
+
+                                totalLessons > 0 &&
+                                        completedLessons == totalLessons ->
+                                    roadmapScreenText(
+                                        "Roadmap completed!"
+                                    )
+
+                                else -> roadmapScreenText(
+                                    "lessons_progress"
+                                ).replace(
+                                    "{completed}",
+                                    completedLessons.toString()
+                                ).replace(
+                                    "{total}",
+                                    totalLessons.toString()
+                                )
+                            }
+
                             Text(
-                                text = if (completedLessons == 0) {
-                                    "Ready to get started?"
-                                } else if (completedLessons == totalLessons) {
-                                    "Roadmap completed!"
-                                } else {
-                                    "$completedLessons of $totalLessons lessons completed"
-                                },
+                                text = progressMessage,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = TextSecondary
                             )
@@ -361,7 +372,8 @@ fun RoadmapScreen(
                                 .size(54.dp)
                                 .clip(CircleShape)
                                 .background(
-                                    if (completedLessons == totalLessons &&
+                                    if (
+                                        completedLessons == totalLessons &&
                                         totalLessons > 0
                                     ) {
                                         SoftGreen
@@ -409,9 +421,7 @@ fun RoadmapScreen(
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // -----------------------------------------------------
             // PLAN HEADER
-            // -----------------------------------------------------
 
             Row(
                 modifier = Modifier
@@ -419,19 +429,26 @@ fun RoadmapScreen(
                     .padding(horizontal = 20.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-
                 Column(
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(
-                        text = "Your learning plan",
+                        text = roadmapScreenText("Your learning plan"),
                         style = MaterialTheme.typography.titleLarge,
                         color = SkillLinkNavy,
                         fontWeight = FontWeight.Bold
                     )
 
                     Text(
-                        text = "${roadmap.weeks.size} weeks • $totalLessons lessons",
+                        text = roadmapScreenText("plan_count")
+                            .replace(
+                                "{weeks}",
+                                roadmap.weeks.size.toString()
+                            )
+                            .replace(
+                                "{lessons}",
+                                totalLessons.toString()
+                            ),
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary
                     )
@@ -448,22 +465,17 @@ fun RoadmapScreen(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // -----------------------------------------------------
             // WEEKS
-            // -----------------------------------------------------
 
             roadmap.weeks.forEachIndexed { weekIndex, week ->
-
                 val weekStartOrder = weekIndex * 3 + 1
 
                 val completedWeekLessons =
                     week.lessons.mapIndexed { lessonIndex, _ ->
-                        val stepOrder =
-                            weekStartOrder + lessonIndex
+                        val stepOrder = weekStartOrder + lessonIndex
 
                         progressRecords.any {
-                            it.step_order == stepOrder &&
-                                    it.is_completed
+                            it.step_order == stepOrder && it.is_completed
                         }
                     }.count { it }
 
@@ -482,17 +494,15 @@ fun RoadmapScreen(
                     color = White,
                     shadowElevation = 1.dp
                 ) {
-
                     Column(
                         modifier = Modifier.padding(18.dp)
                     ) {
-
                         // WEEK HEADER
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-
                             Box(
                                 modifier = Modifier
                                     .size(42.dp)
@@ -523,7 +533,11 @@ fun RoadmapScreen(
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Text(
-                                    text = "Week ${weekIndex + 1}",
+                                    text = roadmapScreenText("week_label")
+                                        .replace(
+                                            "{week}",
+                                            (weekIndex + 1).toString()
+                                        ),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = if (weekCompleted) {
                                         Green
@@ -571,34 +585,34 @@ fun RoadmapScreen(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         // LESSONS
-                        week.lessons.forEachIndexed { lessonIndex, lesson ->
 
+                        week.lessons.forEachIndexed { lessonIndex, lesson ->
                             val stepOrder =
                                 (weekIndex * 3) + lessonIndex + 1
 
-                            val completed =
-                                progressRecords.any {
-                                    it.step_order == stepOrder &&
-                                            it.is_completed
-                                }
+                            val completed = progressRecords.any {
+                                it.step_order == stepOrder && it.is_completed
+                            }
 
                             LessonRow(
                                 lessonNumber = lessonIndex + 1,
                                 lesson = lesson,
                                 completed = completed,
-
                                 onCheckedChange = { checked ->
-
-                                    val user = supabase.auth.currentUserOrNull()
+                                    val user =
+                                        supabase.auth.currentUserOrNull()
 
                                     if (user == null) {
-                                        errorMessage = "You must be logged in."
+                                        errorMessage =
+                                            roadmapScreenText(
+                                                "You must be logged in."
+                                            )
                                         return@LessonRow
                                     }
 
                                     errorMessage = ""
 
-                                    // Update the screen immediately, before starting database/network work.
+                                    // Update the screen immediately.
                                     val updatedRecord = ProgressRecord(
                                         progress_id = null,
                                         roadmap_id = roadmapId,
@@ -615,15 +629,16 @@ fun RoadmapScreen(
                                     )
 
                                     progressRecords = progressRecords
-                                        .filterNot { it.step_order == stepOrder }
+                                        .filterNot {
+                                            it.step_order == stepOrder
+                                        }
                                         .plus(updatedRecord)
 
                                     scope.launch {
                                         try {
                                             if (roadmapId.isNotBlank()) {
-
-                                                // ProgressRepository saves to Room first,
-                                                // then attempts to synchronize with Supabase.
+                                                // Repository saves locally first,
+                                                // then attempts remote synchronization.
                                                 ProgressRepository.saveProgress(
                                                     roadmapId = roadmapId,
                                                     userId = user.id,
@@ -633,31 +648,34 @@ fun RoadmapScreen(
                                                     isCompleted = checked
                                                 )
 
-                                                // Reload the authoritative local/remote result.
-                                                progressRecords = ProgressRepository.getProgress(
-                                                    roadmapId = roadmapId,
-                                                    userId = user.id
-                                                )
-                                            }
-                                        } catch (e: Exception) {
-                                            errorMessage = e.message
-                                                ?: "Could not save progress."
-
-                                            // Try to restore the screen from locally saved progress.
-                                            if (roadmapId.isNotBlank()) {
-                                                try {
-                                                    progressRecords = ProgressRepository.getProgress(
+                                                progressRecords =
+                                                    ProgressRepository.getProgress(
                                                         roadmapId = roadmapId,
                                                         userId = user.id
                                                     )
+                                            }
+                                        } catch (e: Exception) {
+                                            errorMessage = e.message
+                                                ?: roadmapScreenText(
+                                                    "Could not save progress."
+                                                )
+
+                                            // Recover from locally saved progress.
+                                            if (roadmapId.isNotBlank()) {
+                                                try {
+                                                    progressRecords =
+                                                        ProgressRepository.getProgress(
+                                                            roadmapId = roadmapId,
+                                                            userId = user.id
+                                                        )
                                                 } catch (_: Exception) {
-                                                    // Keep the current screen state if recovery also fails.
+                                                    // Preserve the current state
+                                                    // if recovery also fails.
                                                 }
                                             }
                                         }
                                     }
                                 }
-
                             )
 
                             if (lessonIndex < week.lessons.lastIndex) {
@@ -668,12 +686,9 @@ fun RoadmapScreen(
                 }
             }
 
-            // -----------------------------------------------------
             // ERROR
-            // -----------------------------------------------------
 
             if (errorMessage.isNotEmpty()) {
-
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -696,9 +711,7 @@ fun RoadmapScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // ---------------------------------------------------------
         // BACK BUTTON
-        // ---------------------------------------------------------
 
         OutlinedButton(
             onClick = onBack,
@@ -709,7 +722,7 @@ fun RoadmapScreen(
             shape = RoundedCornerShape(16.dp)
         ) {
             Text(
-                text = "Back to My Learning",
+                text = roadmapScreenText("Back to My Learning"),
                 color = SkillLinkNavy,
                 fontWeight = FontWeight.SemiBold
             )
@@ -748,7 +761,6 @@ private fun LessonRow(
             Color.White
         }
     ) {
-
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -758,7 +770,6 @@ private fun LessonRow(
                 ),
             verticalAlignment = Alignment.CenterVertically
         ) {
-
             Box(
                 modifier = Modifier
                     .size(34.dp)
@@ -804,6 +815,69 @@ private fun LessonRow(
                     FontWeight.Normal
                 }
             )
+        }
+    }
+}
+
+private fun roadmapScreenText(english: String): String {
+    return when (LanguageSupport.currentLanguage.value) {
+        LanguageSupport.AFRIKAANS -> when (english) {
+            "Learning roadmap" -> "Leerplan"
+            "Your personalised learning journey" ->
+                "Jou persoonlike leerreis"
+            "No roadmap available" ->
+                "Geen leerplan beskikbaar nie"
+            "Your roadmap will appear here after it has been generated." ->
+                "Jou leerplan sal hier verskyn nadat dit geskep is."
+            "Your roadmap" -> "Jou leerplan"
+            "Your progress" -> "Jou vordering"
+            "Ready to get started?" -> "Gereed om te begin?"
+            "Roadmap completed!" -> "Leerplan voltooi!"
+            "Your learning plan" -> "Jou leerplan"
+            "Back to My Learning" -> "Terug na My Leerwerk"
+            "You must be logged in." -> "Jy moet aangemeld wees."
+            "Could not load progress." -> "Kon nie vordering laai nie."
+            "Could not save progress." -> "Kon nie vordering stoor nie."
+            "lessons_progress" ->
+                "{completed} van {total} lesse voltooi"
+            "plan_count" -> "{weeks} weke • {lessons} lesse"
+            "week_label" -> "Week {week}"
+            else -> english
+        }
+
+        LanguageSupport.ZULU -> when (english) {
+            "Learning roadmap" -> "Uhlelo lokufunda"
+            "Your personalised learning journey" ->
+                "Uhambo lwakho lokufunda oluqondene nawe"
+            "No roadmap available" ->
+                "Alukho uhlelo lokufunda olutholakalayo"
+            "Your roadmap will appear here after it has been generated." ->
+                "Uhlelo lwakho lokufunda luzovela lapha uma seludaliwe."
+            "Your roadmap" -> "Uhlelo lwakho lokufunda"
+            "Your progress" -> "Inqubekelaphambili yakho"
+            "Ready to get started?" -> "Usukulungele ukuqala?"
+            "Roadmap completed!" -> "Uhlelo lokufunda luqediwe!"
+            "Your learning plan" -> "Uhlelo lwakho lokufunda"
+            "Back to My Learning" -> "Buyela Ekufundeni Kwami"
+            "You must be logged in." ->
+                "Kufanele ungene ku-akhawunti yakho."
+            "Could not load progress." ->
+                "Ayikwazanga ukulayisha inqubekelaphambili."
+            "Could not save progress." ->
+                "Ayikwazanga ukugcina inqubekelaphambili."
+            "lessons_progress" ->
+                "{completed} kwezingu-{total} izifundo seziqediwe"
+            "plan_count" -> "{weeks} amasonto • {lessons} izifundo"
+            "week_label" -> "Isonto {week}"
+            else -> english
+        }
+
+        else -> when (english) {
+            "lessons_progress" ->
+                "{completed} of {total} lessons completed"
+            "plan_count" -> "{weeks} weeks • {lessons} lessons"
+            "week_label" -> "Week {week}"
+            else -> english
         }
     }
 }

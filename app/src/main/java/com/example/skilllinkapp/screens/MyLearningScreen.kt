@@ -1,5 +1,6 @@
 package com.example.skilllinkapp.screens
 
+import com.example.skilllinkapp.LanguageSupport
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -72,6 +73,108 @@ private val SoftPurple = Color(0xFFF0EAFF)
 private val SoftGreen = Color(0xFFEAF8F0)
 private val Green = Color(0xFF25855A)
 private val PurpleDark = Color(0xFF6941C6)
+
+
+
+private fun myLearningText(english: String): String {
+    return when (LanguageSupport.currentLanguage.value) {
+        LanguageSupport.AFRIKAANS -> when (english) {
+            "My Learning" -> "My leerwerk"
+            "Keep building your skills" -> "Hou aan om jou vaardighede te ontwikkel"
+            "You must be logged in." -> "Jy moet aangemeld wees."
+            "Untitled roadmap" -> "Leerroete sonder titel"
+            "Your learning journey" -> "Jou leerreis"
+            "Create your first roadmap and start learning." ->
+                "Skep jou eerste leerroete en begin leer."
+            "roadmap" -> "leerroete"
+            "roadmaps" -> "leerroetes"
+            "in your library" -> "in jou biblioteek"
+            "completed" -> "voltooi"
+            "In Progress" -> "Aan die gang"
+            "Completed" -> "Voltooi"
+            "Loading your roadmaps..." -> "Jou leerroetes word gelaai..."
+            "Something went wrong" -> "Iets het verkeerd geloop"
+            "Try again" -> "Probeer weer"
+            "No completed roadmaps" -> "Geen voltooide leerroetes nie"
+            "Complete a roadmap and it will appear here." ->
+                "Voltooi 'n leerroete en dit sal hier verskyn."
+            "View In Progress" -> "Bekyk leerroetes aan die gang"
+            "No roadmaps yet" -> "Nog geen leerroetes nie"
+            "Create a personalised roadmap and start your learning journey." ->
+                "Skep 'n persoonlike leerroete en begin jou leerreis."
+            "Generate Roadmap" -> "Genereer leerroete"
+            "Completed roadmaps" -> "Voltooide leerroetes"
+            "Your finished learning journeys." -> "Jou voltooide leerreise."
+            "Continue learning" -> "Hou aan leer"
+            "Pick up where you left off." -> "Gaan voort waar jy opgehou het."
+            "Delete roadmap?" -> "Skrap leerroete?"
+            "Delete" -> "Skrap"
+            "Cancel" -> "Kanselleer"
+            "Progress" -> "Vordering"
+            "Roadmap completed" -> "Leerroete voltooi"
+            "Continue learning  →" -> "Hou aan leer  →"
+            "Today" -> "Vandag"
+            "Yesterday" -> "Gister"
+            "of" -> "van"
+            "lessons" -> "lesse"
+            "Unable to delete this roadmap. Please log in again." ->
+                "Kan nie hierdie leerroete skrap nie. Meld asseblief weer aan."
+            "Could not delete roadmap." ->
+                "Kon nie die leerroete skrap nie."
+            "this roadmap" -> "hierdie leerroete"
+            else -> english
+        }
+
+        LanguageSupport.ZULU -> when (english) {
+            "My Learning" -> "Ukufunda Kwami"
+            "Keep building your skills" -> "Qhubeka uthuthukisa amakhono akho"
+            "You must be logged in." -> "Kufanele ungene ku-akhawunti yakho."
+            "Untitled roadmap" -> "Uhlelo lokufunda olungenasihloko"
+            "Your learning journey" -> "Uhambo lwakho lokufunda"
+            "Create your first roadmap and start learning." ->
+                "Dala uhlelo lwakho lokuqala lokufunda bese uqala ukufunda."
+            "roadmap" -> "uhlelo lokufunda"
+            "roadmaps" -> "izinhlelo zokufunda"
+            "in your library" -> "kulabhulali yakho"
+            "completed" -> "kuqediwe"
+            "In Progress" -> "Kuyaqhubeka"
+            "Completed" -> "Kuqediwe"
+            "Loading your roadmaps..." -> "Kulayishwa izinhlelo zakho zokufunda..."
+            "Something went wrong" -> "Kukhona okungahambanga kahle"
+            "Try again" -> "Zama futhi"
+            "No completed roadmaps" -> "Azikho izinhlelo zokufunda eziqediwe"
+            "Complete a roadmap and it will appear here." ->
+                "Qedela uhlelo lokufunda futhi luzovela lapha."
+            "View In Progress" -> "Buka okuqhubekayo"
+            "No roadmaps yet" -> "Azikho izinhlelo zokufunda okwamanje"
+            "Create a personalised roadmap and start your learning journey." ->
+                "Dala uhlelo lokufunda oluqondene nawe bese uqala ukufunda."
+            "Generate Roadmap" -> "Dala uhlelo lokufunda"
+            "Completed roadmaps" -> "Izinhlelo zokufunda eziqediwe"
+            "Your finished learning journeys." -> "Uhambo lwakho lokufunda oluqediwe."
+            "Continue learning" -> "Qhubeka nokufunda"
+            "Pick up where you left off." -> "Qhubeka lapho ogcine khona."
+            "Delete roadmap?" -> "Susa uhlelo lokufunda?"
+            "Delete" -> "Susa"
+            "Cancel" -> "Khansela"
+            "Progress" -> "Inqubekelaphambili"
+            "Roadmap completed" -> "Uhlelo lokufunda luqediwe"
+            "Continue learning  →" -> "Qhubeka nokufunda  →"
+            "Today" -> "Namuhla"
+            "Yesterday" -> "Izolo"
+            "of" -> "ku"
+            "lessons" -> "izifundo"
+            "Unable to delete this roadmap. Please log in again." ->
+                "Ayikwazi ukususa lolu hlelo. Sicela ungene futhi."
+            "Could not delete roadmap." ->
+                "Ayikwazanga ukususa uhlelo lokufunda."
+            "this roadmap" -> "lolu hlelo lokufunda"
+            else -> english
+        }
+
+        else -> english
+    }
+}
 
 
 @Composable
@@ -458,14 +561,14 @@ fun MyLearningScreen(
                 Column {
 
                     Text(
-                        text = "My Learning",
+                        text = myLearningText("My Learning"),
                         style = MaterialTheme.typography.headlineSmall,
                         color = SkillLinkNavy,
                         fontWeight = FontWeight.Bold
                     )
 
                     Text(
-                        text = "Keep building your skills",
+                        text = myLearningText("Keep building your skills"),
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary
                     )
@@ -499,7 +602,7 @@ fun MyLearningScreen(
                     ) {
 
                         Text(
-                            text = "Your learning journey",
+                            text = myLearningText("Your learning journey"),
                             style = MaterialTheme.typography.titleMedium,
                             color = Color.White,
                             fontWeight = FontWeight.Bold
@@ -510,18 +613,17 @@ fun MyLearningScreen(
                         )
 
                         Text(
-                            text =
-                                if (roadmaps.isEmpty()) {
-                                    "Create your first roadmap and start learning."
-                                } else {
-                                    "${roadmaps.size} roadmap" +
-                                            if (roadmaps.size == 1) {
-                                                ""
-                                            } else {
-                                                "s"
-                                            } +
-                                            " in your library"
-                                },
+                            text = if (roadmaps.isEmpty()) {
+                                myLearningText("Create your first roadmap and start learning.")
+                            } else {
+                                myLearningText(
+                                    if (roadmaps.size == 1) {
+                                        "1 roadmap in your library"
+                                    } else {
+                                        "${roadmaps.size} roadmaps in your library"
+                                    }
+                                )
+                            },
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.White.copy(alpha = 0.82f)
                         )
@@ -543,7 +645,7 @@ fun MyLearningScreen(
                         )
 
                         Text(
-                            text = "completed",
+                            text = myLearningText("completed"),
                             style = MaterialTheme.typography.labelSmall,
                             color = Color.White.copy(alpha = 0.78f)
                         )
@@ -569,7 +671,7 @@ fun MyLearningScreen(
         ) {
 
             LearningFilter(
-                text = "In Progress",
+                text = myLearningText("In Progress"),
                 count = inProgressCount,
                 selected = !showCompleted,
                 onClick = {
@@ -578,7 +680,7 @@ fun MyLearningScreen(
             )
 
             LearningFilter(
-                text = "Completed",
+                text = myLearningText("Completed"),
                 count = completedCount,
                 selected = showCompleted,
                 onClick = {
@@ -627,7 +729,7 @@ fun MyLearningScreen(
                         )
 
                         Text(
-                            text = "Loading your roadmaps...",
+                            text = myLearningText("Loading your roadmaps..."),
                             style = MaterialTheme.typography.bodyMedium,
                             color = TextSecondary
                         )
@@ -642,9 +744,9 @@ fun MyLearningScreen(
                 errorMessage.isNotBlank() -> {
 
                     EmptyLearningState(
-                        title = "Something went wrong",
+                        title = myLearningText("Something went wrong"),
                         description = errorMessage,
-                        buttonText = "Try again",
+                        buttonText = myLearningText("Try again"),
                         onButtonClick = {
                             errorMessage = ""
                             isLoading = true
@@ -663,23 +765,23 @@ fun MyLearningScreen(
                     EmptyLearningState(
                         title =
                             if (showCompleted) {
-                                "No completed roadmaps"
+                                myLearningText("No completed roadmaps")
                             } else {
-                                "No roadmaps yet"
+                                myLearningText("No roadmaps yet")
                             },
 
                         description =
                             if (showCompleted) {
-                                "Complete a roadmap and it will appear here."
+                                myLearningText("Complete a roadmap and it will appear here.")
                             } else {
-                                "Create a personalised roadmap and start your learning journey."
+                                myLearningText("Create a personalised roadmap and start your learning journey.")
                             },
 
                         buttonText =
                             if (showCompleted) {
-                                "View In Progress"
+                                myLearningText("View In Progress")
                             } else {
-                                "Generate Roadmap"
+                                myLearningText("Generate Roadmap")
                             },
 
                         onButtonClick = {
@@ -719,9 +821,9 @@ fun MyLearningScreen(
                             Text(
                                 text =
                                     if (showCompleted) {
-                                        "Completed roadmaps"
+                                        myLearningText("Completed roadmaps")
                                     } else {
-                                        "Continue learning"
+                                        myLearningText("Continue learning")
                                     },
                                 style =
                                     MaterialTheme.typography.titleLarge,
@@ -736,9 +838,9 @@ fun MyLearningScreen(
                             Text(
                                 text =
                                     if (showCompleted) {
-                                        "Your finished learning journeys."
+                                        myLearningText("Your finished learning journeys.")
                                     } else {
-                                        "Pick up where you left off."
+                                        myLearningText("Pick up where you left off.")
                                     },
                                 style =
                                     MaterialTheme.typography.bodySmall,
@@ -893,7 +995,7 @@ fun MyLearningScreen(
 
             } catch (_: Exception) {
 
-                "this roadmap"
+                myLearningText("this roadmap")
             }
 
 
@@ -904,9 +1006,8 @@ fun MyLearningScreen(
             },
 
             title = {
-
                 Text(
-                    text = "Delete roadmap?",
+                    text = myLearningText("Delete roadmap?"),
                     color = SkillLinkNavy,
                     fontWeight = FontWeight.Bold
                 )
@@ -916,9 +1017,9 @@ fun MyLearningScreen(
 
                 Text(
                     text =
-                        "Are you sure you want to delete " +
+                        myLearningText("Are you sure you want to delete " +
                                 "\"$selectedTitle\"? " +
-                                "This will also remove its learning progress."
+                                "This will also remove its learning progress.")
                 )
             },
 
@@ -952,7 +1053,7 @@ fun MyLearningScreen(
                         ) {
 
                             errorMessage =
-                                "Unable to delete this roadmap. Please log in again."
+                                myLearningText("Unable to delete this roadmap. Please log in again.")
 
                             roadmapToDelete = null
 
@@ -1053,7 +1154,7 @@ fun MyLearningScreen(
 
                                 errorMessage =
                                     e.message
-                                        ?: "Could not delete roadmap."
+                                        ?: myLearningText("Could not delete roadmap.")
 
                                 roadmapToDelete = null
                             }
@@ -1077,7 +1178,7 @@ fun MyLearningScreen(
                 ) {
 
                     Text(
-                        text = "Cancel"
+                        text = myLearningText("Cancel")
                     )
                 }
             }
@@ -1306,9 +1407,9 @@ private fun RoadmapCard(
                 Text(
                     text =
                         if (completedRoadmap) {
-                            "Completed"
+                            myLearningText("Completed")
                         } else {
-                            "Progress"
+                            myLearningText("Progress")
                         },
                     style =
                         MaterialTheme.typography.labelMedium,
@@ -1432,9 +1533,9 @@ private fun RoadmapCard(
                     Text(
                         text =
                             if (completedRoadmap) {
-                                "✓  Roadmap completed"
+                                myLearningText("✓  Roadmap completed")
                             } else {
-                                "Continue learning  →"
+                                myLearningText("Continue learning  →")
                             },
                         style =
                             MaterialTheme.typography.labelLarge,
@@ -1571,7 +1672,7 @@ private fun parseRoadmapData(
     val objectData =
         current as? JsonObject
             ?: throw Exception(
-                "roadmap_data could not be converted into a JSON object."
+                myLearningText("roadmap_data could not be converted into a JSON object.")
             )
 
 
@@ -1600,7 +1701,7 @@ private fun parseRoadmapData(
 
         return inner as? JsonObject
             ?: throw Exception(
-                "generated_roadmap could not be converted into a JSON object."
+                myLearningText("generated_roadmap could not be converted into a JSON object.")
             )
     }
 
@@ -1654,12 +1755,12 @@ private fun isProperRoadmapTitle(
 
     val invalidTitles =
         setOf(
-            "roadmap",
-            "learning roadmap",
-            "your learning roadmap",
-            "my roadmap",
-            "personalised roadmap",
-            "personalized roadmap"
+            myLearningText("roadmap"),
+                myLearningText("learning roadmap"),
+                    myLearningText("your learning roadmap"),
+                        myLearningText("my roadmap"),
+                            myLearningText("personalised roadmap"),
+                                myLearningText("personalized roadmap")
         )
 
     return cleaned !in invalidTitles
@@ -1698,10 +1799,10 @@ private fun formatLastAccessed(
         when (localDate) {
 
             today ->
-                "Today"
+                myLearningText("Today")
 
             yesterday ->
-                "Yesterday"
+            myLearningText("Yesterday")
 
             else -> {
 

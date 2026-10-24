@@ -1,5 +1,7 @@
 package com.example.skilllinkapp
 
+import com.example.skilllinkapp.LanguageSupport
+import com.example.skilllinkapp.localizedText
 import android.content.Intent
 import android.os.Bundle
 
@@ -56,6 +58,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         supabase.handleDeeplinks(intent)
+
+        LanguageSupport.load(this)
 
         setContent {
             SkillLinkAppTheme {
@@ -354,7 +358,7 @@ fun SkillLinkApp() {
                     },
 
                     label = {
-                        Text("Home")
+                        Text(localizedText("Home"))
                     }
                 )
 
@@ -379,7 +383,7 @@ fun SkillLinkApp() {
                     },
 
                     label = {
-                        Text("Roadmap")
+                        Text(localizedText("Roadmap"))
                     }
                 )
 
@@ -406,7 +410,7 @@ fun SkillLinkApp() {
                     },
 
                     label = {
-                        Text("My Learning")
+                        Text(localizedText("My Learning"))
                     }
                 )
 
@@ -434,7 +438,7 @@ fun SkillLinkApp() {
                     },
 
                     label = {
-                        Text("Profile")
+                        Text(localizedText("Profile"))
                     }
                 )
 
@@ -462,7 +466,7 @@ fun SkillLinkApp() {
                     },
 
                     label = {
-                        Text("Settings")
+                        Text(localizedText("Settings"))
                     }
                 )
             }
