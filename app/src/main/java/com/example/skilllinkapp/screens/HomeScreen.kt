@@ -1,5 +1,10 @@
 package com.example.skilllinkapp.screens
 
+import kotlinx.serialization.json.Json
+import androidx.compose.ui.platform.LocalContext
+import com.example.skilllinkapp.SkillLinkApplication
+import com.example.skilllinkapp.data.local.CachedRoadmapEntity
+import kotlinx.coroutines.flow.first
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -91,14 +96,23 @@ fun HomeScreen(
 
     val user = supabase.auth.currentUserOrNull()
 
+    val context = LocalContext.current
+
+    val roadmapDao = remember(context) {
+        (context.applicationContext as SkillLinkApplication)
+            .database
+            .skillLinkDao()
+    }
+
+
     LaunchedEffect(
         user?.id,
         roadmapId,
         roadmapJson
     ) {
-
         if (user == null) {
             isLoading = false
+            loadError = "You must be logged in."
             return@LaunchedEffect
         }
 
@@ -106,153 +120,160 @@ fun HomeScreen(
         loadError = ""
 
         try {
-
-            // -------------------------------------------------
-            // If MainActivity already supplied a roadmap,
-            // use it immediately.
-            // -------------------------------------------------
-
-            if (
-                roadmapId.isNotBlank() &&
-                roadmapJson.isNotBlank()
-            ) {
-
+            // Use roadmap data supplied by the app if available.
+            if (roadmapId.isNotBlank() && roadmapJson.isNotBlank()) {
                 currentRoadmapId = roadmapId
 
-                val suppliedRoadmap =
-                    parseRoadmapJson(roadmapJson)
+                val suppliedRoadmap = parseRoadmapJson(roadmapJson)
 
-                roadmapTitle =
-                    suppliedRoadmap
+                roadmapTitle = suppliedRoadmap
+                    ?.get("title")
+                    ?.jsonPrimitive
+                    ?.content
+                    ?: "Your learning roadmap"
+
+                totalLessons = countLessons(suppliedRoadmap)
+
+                val progress = ProgressRepository.getProgress(
+                    roadmapId = roadmapId,
+                    userId = user.id
+                )
+
+                completedLessons = progress.count { it.is_completed }
+                isLoading = false
+                return@LaunchedEffect
+            }
+
+            // Try Supabase first.
+            val remoteRoadmaps = supabase
+                .from("roadmaps")
+                .select {
+                    filter {
+                        eq("user_id", user.id)
+                    }
+                }
+                .decodeList<JsonObject>()
+
+            // Cache each roadmap locally for offline use.
+            val cachedRoadmaps = remoteRoadmaps.mapNotNull { item ->
+                try {
+                    val id = item["roadmap_id"]
+                        ?.jsonPrimitive
+                        ?.content
+                        ?: return@mapNotNull null
+
+                    val data = item["roadmap_data"]
+                        ?: return@mapNotNull null
+
+                    val parsed = parseRoadmapElement(data)
+                    val title = parsed
                         ?.get("title")
                         ?.jsonPrimitive
                         ?.content
+                        ?: item["target_skill"]
+                            ?.jsonPrimitive
+                            ?.content
                         ?: "Your learning roadmap"
 
-                totalLessons =
-                    countLessons(suppliedRoadmap)
-
-                val progress =
-                    ProgressRepository.getProgress(
-                        roadmapId = roadmapId,
-                        userId = user.id
+                    CachedRoadmapEntity(
+                        roadmapId = id,
+                        userId = user.id,
+                        title = title,
+                        roadmapJson = item.toString()
                     )
-
-                completedLessons =
-                    progress.count {
-                        it.is_completed
-                    }
-
-                isLoading = false
-                return@LaunchedEffect
+                } catch (_: Exception) {
+                    null
+                }
             }
 
-            // -------------------------------------------------
-            // Otherwise load the user's latest roadmap
-            // from Supabase.
-            // -------------------------------------------------
+            if (cachedRoadmaps.isNotEmpty()) {
+                roadmapDao.saveRoadmaps(cachedRoadmaps)
+            }
 
-            val roadmaps =
-                supabase
-                    .from("roadmaps")
-                    .select {
-                        filter {
-                            eq(
-                                "user_id",
-                                user.id
-                            )
-                        }
-                    }
-                    .decodeList<JsonObject>()
+            // Choose the most recent roadmap.
+            val latestRoadmap = remoteRoadmaps.maxByOrNull {
+                it["created_at"]?.jsonPrimitive?.content ?: ""
+            }
 
-            if (roadmaps.isEmpty()) {
-
+            if (latestRoadmap == null) {
                 currentRoadmapId = ""
-                roadmapTitle =
-                    "Start your learning journey"
-
+                roadmapTitle = "Start your learning journey"
                 completedLessons = 0
                 totalLessons = 0
-
-                isLoading = false
-
-                return@LaunchedEffect
-            }
-
-            // -------------------------------------------------
-            // Get the most recent roadmap.
-            //
-            // We compare created_at instead of assuming
-            // Supabase returned the rows in the correct order.
-            // -------------------------------------------------
-
-            val latestRoadmap =
-                roadmaps.maxByOrNull {
-                    it["created_at"]
-                        ?.jsonPrimitive
-                        ?.content
-                        ?: ""
-                }
-                    ?: roadmaps.last()
-
-            currentRoadmapId =
-                latestRoadmap["roadmap_id"]
+            } else {
+                currentRoadmapId = latestRoadmap["roadmap_id"]
                     ?.jsonPrimitive
                     ?.content
                     ?: ""
 
-            roadmapTitle =
-                latestRoadmap["target_skill"]
+                roadmapTitle = latestRoadmap["target_skill"]
                     ?.jsonPrimitive
                     ?.content
-                    ?.takeIf {
-                        it.isNotBlank()
-                    }
+                    ?.takeIf { it.isNotBlank() }
                     ?: "Your learning roadmap"
 
-            val roadmapDataElement =
-                latestRoadmap["roadmap_data"]
-
-            val roadmapObject =
-                parseRoadmapElement(
-                    roadmapDataElement
+                val roadmapObject = parseRoadmapElement(
+                    latestRoadmap["roadmap_data"]
                 )
 
-            totalLessons =
-                countLessons(roadmapObject)
+                totalLessons = countLessons(roadmapObject)
 
-            if (currentRoadmapId.isNotBlank()) {
-
-                val progress =
+                completedLessons = if (currentRoadmapId.isNotBlank()) {
                     ProgressRepository.getProgress(
                         roadmapId = currentRoadmapId,
                         userId = user.id
+                    ).count { it.is_completed }
+                } else {
+                    0
+                }
+            }
+        } catch (networkError: Exception) {
+            // Supabase failed: fall back to the cached roadmaps.
+            try {
+                val cached = roadmapDao
+                    .observeRoadmaps(user.id)
+                    .first()
+
+                val latestCached = cached.maxByOrNull {
+                    it.cachedAt
+                }
+
+                if (latestCached == null) {
+                    currentRoadmapId = ""
+                    roadmapTitle = "Start your learning journey"
+                    completedLessons = 0
+                    totalLessons = 0
+
+                    loadError =
+                        "No roadmaps are saved for offline use yet. Connect to the internet and open My Learning first."
+                } else {
+                    currentRoadmapId = latestCached.roadmapId
+
+                    val cachedRow = Json
+                        .parseToJsonElement(latestCached.roadmapJson)
+                        .jsonObject
+
+                    val roadmapObject = parseRoadmapElement(
+                        cachedRow["roadmap_data"]
                     )
 
-                completedLessons =
-                    progress.count {
-                        it.is_completed
-                    }
+                    roadmapTitle = latestCached.title
+                    totalLessons = countLessons(roadmapObject)
 
-            } else {
-
-                completedLessons = 0
+                    completedLessons = ProgressRepository.getProgress(
+                        roadmapId = currentRoadmapId,
+                        userId = user.id
+                    ).count { it.is_completed }
+                }
+            } catch (cacheError: Exception) {
+                loadError =
+                    "Could not load your dashboard or saved offline roadmap."
             }
-
-        } catch (e: Exception) {
-
-            loadError =
-                e.message
-                    ?: "Could not load your dashboard."
-
-            completedLessons = 0
-            totalLessons = 0
-
         } finally {
-
             isLoading = false
         }
     }
+
 
     // =========================================================
     // PROGRESS

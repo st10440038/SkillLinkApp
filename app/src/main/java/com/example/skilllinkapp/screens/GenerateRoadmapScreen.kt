@@ -1,5 +1,11 @@
 package com.example.skilllinkapp.screens
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -68,6 +74,121 @@ private val SoftPurple = Color(0xFFF0EAFF)
 private val PurpleDark = Color(0xFF6941C6)
 
 
+
+private fun hasValidatedInternet(context: Context): Boolean {
+    val connectivityManager =
+        context.getSystemService(Context.CONNECTIVITY_SERVICE)
+                as ConnectivityManager
+
+    val network = connectivityManager.activeNetwork
+        ?: return false
+
+    val capabilities =
+        connectivityManager.getNetworkCapabilities(network)
+            ?: return false
+
+    return capabilities.hasCapability(
+        NetworkCapabilities.NET_CAPABILITY_INTERNET
+    ) && capabilities.hasCapability(
+        NetworkCapabilities.NET_CAPABILITY_VALIDATED
+    )
+}
+
+private fun isNetworkError(error: Throwable): Boolean {
+    var current: Throwable? = error
+
+    while (current != null) {
+        if (
+            current is java.net.UnknownHostException ||
+            current is java.net.ConnectException ||
+            current is java.net.SocketTimeoutException ||
+            current is java.net.NoRouteToHostException
+        ) {
+            return true
+        }
+
+        val message = current.message.orEmpty().lowercase()
+
+        if (
+            message.contains("failed to connect") ||
+            message.contains("unable to resolve host") ||
+            message.contains("network is unreachable") ||
+            message.contains("no address associated") ||
+            message.contains("connection timed out") ||
+            message.contains("connection refused")
+        ) {
+            return true
+        }
+
+        current = current.cause
+    }
+
+    return false
+}
+
+
+@Composable
+private fun OfflineBanner() {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+        shape = RoundedCornerShape(18.dp),
+        color = Color(0xFFFFF0F2),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            Color(0xFFF3C3CD)
+        ),
+        shadowElevation = 1.dp
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Color(0xFFFAD5DC)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "♡",
+                    color = Color(0xFFB42345),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = "You're offline",
+                    color = Color(0xFF98233F),
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleSmall
+                )
+
+                Spacer(modifier = Modifier.height(3.dp))
+
+                Text(
+                    text = "Connect to Wi-Fi or mobile data to create a new roadmap.",
+                    color = Color(0xFF8D4053),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
+            Text(
+                text = "♡",
+                color = Color(0xFFC33C5A)
+            )
+        }
+    }
+}
+
+
 @Composable
 fun GenerateRoadmapScreen(
     targetSkill: String,
@@ -113,6 +234,44 @@ fun GenerateRoadmapScreen(
 
     var errorMessage by remember {
         mutableStateOf("")
+    }
+
+    val context = LocalContext.current
+
+    var hasInternet by remember(context) {
+        mutableStateOf(hasValidatedInternet(context))
+    }
+
+    DisposableEffect(context) {
+        val connectivityManager =
+            context.getSystemService(Context.CONNECTIVITY_SERVICE)
+                    as ConnectivityManager
+
+        val callback = object : ConnectivityManager.NetworkCallback() {
+
+            override fun onAvailable(network: Network) {
+                hasInternet = hasValidatedInternet(context)
+            }
+
+            override fun onLost(network: Network) {
+                hasInternet = hasValidatedInternet(context)
+            }
+
+            override fun onCapabilitiesChanged(
+                network: Network,
+                networkCapabilities: NetworkCapabilities
+            ) {
+                hasInternet = hasValidatedInternet(context)
+            }
+        }
+
+        connectivityManager.registerDefaultNetworkCallback(callback)
+
+        hasInternet = hasValidatedInternet(context)
+
+        onDispose {
+            connectivityManager.unregisterNetworkCallback(callback)
+        }
     }
 
     val scope = rememberCoroutineScope()
@@ -183,6 +342,9 @@ fun GenerateRoadmapScreen(
             }
         }
 
+        if (!hasInternet) {
+            OfflineBanner()
+        }
 
         // ---------------------------------------------------------
         // HERO
@@ -577,10 +739,13 @@ fun GenerateRoadmapScreen(
             onClick = {
 
                 if (learningGoal.isBlank()) {
+                    errorMessage = "Please enter your learning goal."
+                    return@Button
+                }
 
+                if (!hasInternet) {
                     errorMessage =
-                        "Please enter your learning goal."
-
+                        "No internet connection. Please connect to Wi-Fi or mobile data and try again."
                     return@Button
                 }
 
@@ -760,10 +925,13 @@ fun GenerateRoadmapScreen(
 
                     } catch (e: Exception) {
 
-                        errorMessage =
-                            e.message
-                                ?: "Something went wrong while generating the roadmap."
-
+                        errorMessage = if (
+                            !hasValidatedInternet(context) || isNetworkError(e)
+                        ) {
+                            "No internet connection. Please connect to Wi-Fi or mobile data and try again."
+                        } else {
+                            "We couldn't generate your roadmap right now. Please try again."
+                        }
                     } finally {
 
                         isGenerating = false

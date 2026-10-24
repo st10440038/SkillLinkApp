@@ -1,5 +1,7 @@
 package com.example.skilllinkapp.screens
 
+import androidx.compose.material3.Switch
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement

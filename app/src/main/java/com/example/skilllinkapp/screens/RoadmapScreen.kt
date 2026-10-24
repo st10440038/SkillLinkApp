@@ -586,25 +586,44 @@ fun RoadmapScreen(
                                 lessonNumber = lessonIndex + 1,
                                 lesson = lesson,
                                 completed = completed,
+
                                 onCheckedChange = { checked ->
 
-                                    val user =
-                                        supabase.auth.currentUserOrNull()
+                                    val user = supabase.auth.currentUserOrNull()
 
                                     if (user == null) {
-                                        errorMessage =
-                                            "You must be logged in."
+                                        errorMessage = "You must be logged in."
                                         return@LessonRow
                                     }
 
+                                    errorMessage = ""
+
+                                    // Update the screen immediately, before starting database/network work.
+                                    val updatedRecord = ProgressRecord(
+                                        progress_id = null,
+                                        roadmap_id = roadmapId,
+                                        user_id = user.id,
+                                        step_title = lesson,
+                                        step_description = week.description,
+                                        step_order = stepOrder,
+                                        is_completed = checked,
+                                        completed_at = if (checked) {
+                                            java.time.Instant.now().toString()
+                                        } else {
+                                            null
+                                        }
+                                    )
+
+                                    progressRecords = progressRecords
+                                        .filterNot { it.step_order == stepOrder }
+                                        .plus(updatedRecord)
+
                                     scope.launch {
-
                                         try {
-
-                                            errorMessage = ""
-
                                             if (roadmapId.isNotBlank()) {
 
+                                                // ProgressRepository saves to Room first,
+                                                // then attempts to synchronize with Supabase.
                                                 ProgressRepository.saveProgress(
                                                     roadmapId = roadmapId,
                                                     userId = user.id,
@@ -614,48 +633,31 @@ fun RoadmapScreen(
                                                     isCompleted = checked
                                                 )
 
-                                                progressRecords =
-                                                    ProgressRepository.getProgress(
+                                                // Reload the authoritative local/remote result.
+                                                progressRecords = ProgressRepository.getProgress(
+                                                    roadmapId = roadmapId,
+                                                    userId = user.id
+                                                )
+                                            }
+                                        } catch (e: Exception) {
+                                            errorMessage = e.message
+                                                ?: "Could not save progress."
+
+                                            // Try to restore the screen from locally saved progress.
+                                            if (roadmapId.isNotBlank()) {
+                                                try {
+                                                    progressRecords = ProgressRepository.getProgress(
                                                         roadmapId = roadmapId,
                                                         userId = user.id
                                                     )
-
-                                            } else {
-
-                                                val updatedRecord =
-                                                    ProgressRecord(
-                                                        progress_id = null,
-                                                        roadmap_id = "",
-                                                        user_id = user.id,
-                                                        step_title = lesson,
-                                                        step_description = week.description,
-                                                        step_order = stepOrder,
-                                                        is_completed = checked,
-                                                        completed_at = null
-                                                    )
-
-                                                progressRecords =
-                                                    progressRecords
-                                                        .filterNot {
-                                                            it.step_order == stepOrder
-                                                        }
-                                                        .let { current ->
-                                                            if (checked) {
-                                                                current + updatedRecord
-                                                            } else {
-                                                                current
-                                                            }
-                                                        }
+                                                } catch (_: Exception) {
+                                                    // Keep the current screen state if recovery also fails.
+                                                }
                                             }
-
-                                        } catch (e: Exception) {
-
-                                            errorMessage =
-                                                e.message
-                                                    ?: "Could not save progress."
                                         }
                                     }
                                 }
+
                             )
 
                             if (lessonIndex < week.lessons.lastIndex) {
