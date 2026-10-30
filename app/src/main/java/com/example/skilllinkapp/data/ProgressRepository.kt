@@ -17,7 +17,7 @@ data class ProgressRecord(
     val step_description: String? = null,
     val step_order: Int,
     val is_completed: Boolean = false,
-    val completed_at: String? = null
+    val completed_at: String? = null,
 )
 
 object ProgressRepository {

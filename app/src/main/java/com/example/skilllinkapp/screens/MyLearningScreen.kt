@@ -1,5 +1,8 @@
 package com.example.skilllinkapp.screens
 
+import com.example.skilllinkapp.data.RoadmapTranslationCache
+import com.example.skilllinkapp.network.GeminiService
+import kotlinx.serialization.json.decodeFromJsonElement
 import com.example.skilllinkapp.LanguageSupport
 import android.content.Context
 import android.net.ConnectivityManager
@@ -213,6 +216,16 @@ fun MyLearningScreen(
 
     val context = LocalContext.current
 
+    val selectedLanguage by LanguageSupport.currentLanguage
+
+    var translatedRoadmaps by remember {
+        mutableStateOf<Map<String, JsonObject>>(emptyMap())
+    }
+
+    var translatingRoadmaps by remember {
+        mutableStateOf(false)
+    }
+
     val roadmapDao = remember(context) {
         (context.applicationContext as SkillLinkApplication)
             .database
@@ -425,6 +438,96 @@ fun MyLearningScreen(
 
         roadmapProgress = progressMap
         isLoading = false
+    }
+
+
+    // =========================================================
+// TRANSLATE ROADMAP CARDS
+// =========================================================
+
+    LaunchedEffect(roadmaps, selectedLanguage) {
+        translatedRoadmaps = emptyMap()
+
+        if (roadmaps.isEmpty()) {
+            translatingRoadmaps = false
+            return@LaunchedEffect
+        }
+
+        translatingRoadmaps = true
+
+        val languageName = when (selectedLanguage) {
+            LanguageSupport.ZULU -> "isiZulu"
+            LanguageSupport.AFRIKAANS -> "Afrikaans"
+            else -> "English"
+        }
+
+        val translatedResults = mutableMapOf<String, JsonObject>()
+
+        try {
+            for (roadmapRecord in roadmaps) {
+                val id = roadmapRecord["roadmap_id"]
+                    ?.jsonPrimitive
+                    ?.content
+                    ?: continue
+
+                val data = roadmapRecord["roadmap_data"]
+                    ?: continue
+
+                try {
+                    val originalRoadmap = parseRoadmapData(data)
+
+                    // Use an existing on-device translation first.
+                    val cachedTranslation = RoadmapTranslationCache.get(
+                        context = context,
+                        roadmapId = id,
+                        language = selectedLanguage
+                    )
+
+                    val translatedJson = if (cachedTranslation != null) {
+                        cachedTranslation
+                    } else {
+                        // Translate the roadmap content when no cache exists.
+                        val result = GeminiService.translateRoadmap(
+                            roadmapJson = originalRoadmap.toString(),
+                            targetLanguage = languageName
+                        )
+
+                        // Save the translation for offline use.
+                        RoadmapTranslationCache.save(
+                            context = context,
+                            roadmapId = id,
+                            language = selectedLanguage,
+                            translatedJson = result
+                        )
+
+                        result
+                    }
+
+                    val translatedObject = Json.parseToJsonElement(
+                        translatedJson
+                    ).jsonObject
+
+                    // Verify the translated object has the expected fields.
+                    require(
+                        !translatedObject["title"]
+                            ?.jsonPrimitive
+                            ?.content
+                            .isNullOrBlank()
+                    ) {
+                        "Translated roadmap has no title."
+                    }
+
+                    translatedResults[id] = translatedObject
+                } catch (e: Exception) {
+                    // Keep this roadmap visible in its original language
+                    // if translation fails.
+                    translatedResults[id] = parseRoadmapData(data)
+                }
+            }
+        } finally {
+            translatedRoadmaps = translatedResults
+            translatingRoadmaps = false
+        }
     }
 
 
@@ -867,15 +970,16 @@ fun MyLearningScreen(
                                 roadmap["roadmap_data"]
                                     ?: return@items
 
-                            val roadmapObject =
+                            val originalRoadmapObject =
                                 try {
-                                    parseRoadmapData(
-                                        roadmapData
-                                    )
+                                    parseRoadmapData(roadmapData)
                                 } catch (_: Exception) {
                                     null
-                                }
-                                    ?: return@items
+                                } ?: return@items
+
+                            val roadmapObject =
+                                translatedRoadmaps[roadmapId]
+                                    ?: originalRoadmapObject
 
                             val title =
                                 roadmapObject["title"]

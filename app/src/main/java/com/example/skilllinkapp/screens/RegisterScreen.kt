@@ -1,3 +1,4 @@
+
 package com.example.skilllinkapp.screens
 
 import androidx.compose.foundation.background
@@ -9,14 +10,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -30,9 +29,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.skilllinkapp.LanguageSupport
 import com.example.skilllinkapp.data.supabase
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
@@ -44,30 +46,31 @@ import kotlinx.serialization.json.put
 fun RegisterScreen(
     onLoginClick: () -> Unit
 ) {
-
     var fullName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
+
     var message by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
-
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
+    var registrationSucceeded by remember { mutableStateOf(false) }
 
+    val selectedLanguage by LanguageSupport.currentLanguage
     val scope = rememberCoroutineScope()
 
     val purple = Color(0xFF6C4AB6)
     val lightPurple = Color(0xFFF4F0FF)
     val textDark = Color(0xFF242124)
     val textGray = Color(0xFF777277)
+    val errorColor = Color(0xFFB3261E)
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
     ) {
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -75,174 +78,167 @@ fun RegisterScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-
-            // SkillLink logo
             Box(
                 modifier = Modifier
-                    .size(68.dp)
                     .clip(RoundedCornerShape(20.dp))
-                    .background(lightPurple),
+                    .background(lightPurple)
+                    .padding(18.dp),
                 contentAlignment = Alignment.Center
             ) {
-
                 Text(
                     text = "S",
                     color = purple,
-                    fontSize = MaterialTheme.typography.displaySmall.fontSize,
+                    fontSize = 38.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             Text(
-                text = "Create your account",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = textDark
+                text = authText("register_title", selectedLanguage),
+                color = textDark,
+                fontSize = 26.sp,
+                fontWeight = FontWeight.Bold
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Join SkillLink and start learning from others.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = textGray
+                text = authText("register_subtitle", selectedLanguage),
+                color = textGray,
+                fontSize = 14.sp
             )
 
-            Spacer(modifier = Modifier.height(26.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            // Full name
             OutlinedTextField(
                 value = fullName,
                 onValueChange = {
                     fullName = it
                     message = ""
+                    registrationSucceeded = false
                 },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
                 label = {
-                    Text("Full name")
+                    Text(authText("full_name", selectedLanguage))
                 },
-                shape = RoundedCornerShape(14.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = purple,
-                    focusedLabelColor = purple,
-                    cursorColor = purple
-                )
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Text
+                ),
+                shape = RoundedCornerShape(12.dp)
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Email
             OutlinedTextField(
                 value = email,
                 onValueChange = {
                     email = it
                     message = ""
+                    registrationSucceeded = false
                 },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
                 label = {
-                    Text("Email address")
+                    Text(authText("email", selectedLanguage))
                 },
-                shape = RoundedCornerShape(14.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = purple,
-                    focusedLabelColor = purple,
-                    cursorColor = purple
-                )
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Email
+                ),
+                shape = RoundedCornerShape(12.dp)
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Password
             OutlinedTextField(
                 value = password,
                 onValueChange = {
                     password = it
                     message = ""
+                    registrationSucceeded = false
                 },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
                 label = {
-                    Text("Password")
+                    Text(authText("password", selectedLanguage))
+                },
+                singleLine = true,
+                visualTransformation = if (passwordVisible) {
+                    VisualTransformation.None
+                } else {
+                    PasswordVisualTransformation()
                 },
                 trailingIcon = {
-
                     TextButton(
                         onClick = {
                             passwordVisible = !passwordVisible
                         }
                     ) {
                         Text(
-                            text = if (passwordVisible) "Hide" else "Show",
-                            style = MaterialTheme.typography.labelMedium,
+                            text = authText(
+                                if (passwordVisible) "hide" else "show",
+                                selectedLanguage
+                            ),
                             color = purple
                         )
                     }
                 },
-                visualTransformation =
-                    if (passwordVisible) {
-                        VisualTransformation.None
-                    } else {
-                        PasswordVisualTransformation()
-                    },
-                shape = RoundedCornerShape(14.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = purple,
-                    focusedLabelColor = purple,
-                    cursorColor = purple
-                )
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password
+                ),
+                shape = RoundedCornerShape(12.dp)
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Confirm password
             OutlinedTextField(
                 value = confirmPassword,
                 onValueChange = {
                     confirmPassword = it
                     message = ""
+                    registrationSucceeded = false
                 },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
                 label = {
-                    Text("Confirm password")
+                    Text(
+                        authText("confirm_password", selectedLanguage)
+                    )
+                },
+                singleLine = true,
+                visualTransformation = if (confirmPasswordVisible) {
+                    VisualTransformation.None
+                } else {
+                    PasswordVisualTransformation()
                 },
                 trailingIcon = {
-
                     TextButton(
                         onClick = {
-                            confirmPasswordVisible = !confirmPasswordVisible
+                            confirmPasswordVisible =
+                                !confirmPasswordVisible
                         }
                     ) {
                         Text(
-                            text = if (confirmPasswordVisible) "Hide" else "Show",
-                            style = MaterialTheme.typography.labelMedium,
+                            text = authText(
+                                if (confirmPasswordVisible) "hide" else "show",
+                                selectedLanguage
+                            ),
                             color = purple
                         )
                     }
                 },
-                visualTransformation =
-                    if (confirmPasswordVisible) {
-                        VisualTransformation.None
-                    } else {
-                        PasswordVisualTransformation()
-                    },
-                shape = RoundedCornerShape(14.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = purple,
-                    focusedLabelColor = purple,
-                    cursorColor = purple
-                )
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password
+                ),
+                shape = RoundedCornerShape(12.dp)
             )
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Create account
             Button(
                 onClick = {
+                    message = ""
+                    registrationSucceeded = false
 
                     if (
                         fullName.isBlank() ||
@@ -250,51 +246,51 @@ fun RegisterScreen(
                         password.isBlank() ||
                         confirmPassword.isBlank()
                     ) {
-                        message = "Please fill in all fields."
+                        message = authText(
+                            "fill_fields",
+                            selectedLanguage
+                        )
                         return@Button
                     }
 
                     if (password != confirmPassword) {
-                        message = "Passwords do not match."
+                        message = authText(
+                            "password_mismatch",
+                            selectedLanguage
+                        )
                         return@Button
                     }
 
                     scope.launch {
-
                         isLoading = true
-                        message = ""
 
                         val enteredEmail = email.trim()
                         val enteredPassword = password
+                        val enteredFullName = fullName.trim()
 
                         try {
-
                             supabase.auth.signUpWith(
                                 Email,
                                 redirectUrl = "skilllink://login-callback"
                             ) {
-
                                 this.email = enteredEmail
                                 this.password = enteredPassword
 
                                 data = buildJsonObject {
-                                    put(
-                                        "full_name",
-                                        fullName.trim()
-                                    )
+                                    put("full_name", enteredFullName)
                                 }
                             }
 
-                            message =
-                                "Account created successfully. Check your email."
-
+                            registrationSucceeded = true
+                            message = authText(
+                                "account_created",
+                                selectedLanguage
+                            )
                         } catch (e: Exception) {
-
-                            message =
-                                "${e::class.simpleName}: ${e.message}"
-
+                            // Preserve backend details to help diagnose failures.
+                            registrationSucceeded = false
+                            message = "${e::class.simpleName}: ${e.message}"
                         } finally {
-
                             isLoading = false
                         }
                     }
@@ -302,74 +298,66 @@ fun RegisterScreen(
                 enabled = !isLoading,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(54.dp),
-                shape = RoundedCornerShape(14.dp),
+                    .height(52.dp),
+                shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = purple,
-                    contentColor = Color.White
+                    containerColor = purple
                 )
             ) {
-
                 if (isLoading) {
-
                     CircularProgressIndicator(
-                        modifier = Modifier.size(22.dp),
                         color = Color.White,
-                        strokeWidth = 2.dp
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.height(22.dp)
                     )
-
                 } else {
-
                     Text(
-                        text = "Create account",
-                        style = MaterialTheme.typography.labelLarge
+                        text = authText(
+                            "create_account",
+                            selectedLanguage
+                        ),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }
 
-            // Message
             if (message.isNotEmpty()) {
-
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
                     text = message,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (
-                        message.startsWith("Account created")
-                    ) {
+                    color = if (registrationSucceeded) {
                         purple
                     } else {
-                        MaterialTheme.colorScheme.error
-                    }
+                        errorColor
+                    },
+                    fontSize = 13.sp
                 )
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             Text(
-                text = "Already have an account?",
-                style = MaterialTheme.typography.bodyMedium,
-                color = textGray
+                text = authText("has_account", selectedLanguage),
+                color = textGray,
+                fontSize = 14.sp
             )
 
-            TextButton(
-                onClick = onLoginClick
-            ) {
-
+            TextButton(onClick = onLoginClick) {
                 Text(
-                    text = "Log in",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = purple
+                    text = authText("login", selectedLanguage),
+                    color = purple,
+                    fontWeight = FontWeight.SemiBold
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = "Teach. Learn. Connect.",
-                style = MaterialTheme.typography.labelMedium,
-                color = textGray
+                text = authText("tagline", selectedLanguage),
+                color = textGray,
+                fontSize = 13.sp
             )
         }
     }

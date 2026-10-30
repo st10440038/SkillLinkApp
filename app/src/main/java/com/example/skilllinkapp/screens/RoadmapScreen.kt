@@ -1,5 +1,9 @@
 package com.example.skilllinkapp.screens
 
+
+import com.example.skilllinkapp.network.GeminiService
+import androidx.compose.ui.platform.LocalContext
+import com.example.skilllinkapp.data.RoadmapTranslationCache
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -74,7 +78,99 @@ fun RoadmapScreen(
     roadmapId: String = "",
     onBack: () -> Unit
 ) {
-    val roadmap = remember(roadmapJson) {
+
+
+    val context = LocalContext.current
+    val selectedLanguage by LanguageSupport.currentLanguage
+
+    var displayedRoadmapJson by remember(roadmapId) {
+        mutableStateOf(roadmapJson)
+    }
+
+    var isTranslating by remember {
+        mutableStateOf(false)
+    }
+
+    var translationError by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    LaunchedEffect(roadmapId, roadmapJson, selectedLanguage) {
+        displayedRoadmapJson = roadmapJson
+        translationError = null
+
+        if (roadmapJson.isBlank()) {
+            return@LaunchedEffect
+        }
+
+        val languageName = when (selectedLanguage) {
+            LanguageSupport.ZULU -> "isiZulu"
+            LanguageSupport.AFRIKAANS -> "Afrikaans"
+            else -> "English"
+        }
+
+        // Reuse a translation saved on this device if available.
+        val cachedTranslation = if (roadmapId.isNotBlank()) {
+            RoadmapTranslationCache.get(
+                context = context,
+                roadmapId = roadmapId,
+                language = selectedLanguage
+            )
+        } else {
+            null
+        }
+
+        if (cachedTranslation != null) {
+            displayedRoadmapJson = cachedTranslation
+            return@LaunchedEffect
+        }
+
+        // New roadmaps are generated in the selected language.
+        // For existing roadmaps, request translation if needed.
+        isTranslating = true
+
+        try {
+            val translatedJson = GeminiService.translateRoadmap(
+                roadmapJson = roadmapJson,
+                targetLanguage = languageName
+            )
+
+            // Verify that the returned JSON can be displayed.
+            Json {
+                ignoreUnknownKeys = true
+            }.decodeFromString<GeneratedRoadmap>(translatedJson)
+
+            displayedRoadmapJson = translatedJson
+
+            if (roadmapId.isNotBlank()) {
+                RoadmapTranslationCache.save(
+                    context = context,
+                    roadmapId = roadmapId,
+                    language = selectedLanguage,
+                    translatedJson = translatedJson
+                )
+            }
+        } catch (e: Exception) {
+            translationError = e.message
+                ?: "Unable to translate this roadmap."
+
+            displayedRoadmapJson = roadmapJson
+        } finally {
+            isTranslating = false
+        }
+    }
+
+    val roadmap = remember(displayedRoadmapJson) {
+        try {
+            Json {
+                ignoreUnknownKeys = true
+            }.decodeFromString<GeneratedRoadmap>(displayedRoadmapJson)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    val originalRoadmap = remember(roadmapJson) {
         try {
             Json {
                 ignoreUnknownKeys = true
@@ -83,6 +179,8 @@ fun RoadmapScreen(
             null
         }
     }
+
+
 
     var progressRecords by remember {
         mutableStateOf<List<ProgressRecord>>(emptyList())
@@ -149,6 +247,18 @@ fun RoadmapScreen(
             .background(PageBackground)
             .verticalScroll(rememberScrollState())
     ) {
+
+        if (isTranslating) {
+            CircularProgressIndicator()
+        }
+
+        translationError?.let { error ->
+            Text(
+                text = "Translation failed: $error",
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+
         // TOP BAR
 
         Row(
@@ -197,6 +307,17 @@ fun RoadmapScreen(
                     ),
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary
+                )
+            }
+
+            if (isTranslating) {
+                CircularProgressIndicator()
+            }
+
+            translationError?.let { error ->
+                Text(
+                    text = "Translation failed: $error",
+                    color = MaterialTheme.colorScheme.error
                 )
             }
         }
@@ -586,9 +707,21 @@ fun RoadmapScreen(
 
                         // LESSONS
 
+
                         week.lessons.forEachIndexed { lessonIndex, lesson ->
-                            val stepOrder =
-                                (weekIndex * 3) + lessonIndex + 1
+                            val stepOrder = (weekIndex * 3) + lessonIndex + 1
+
+                            val originalWeek = originalRoadmap
+                                ?.weeks
+                                ?.getOrNull(weekIndex)
+
+                            val originalLesson = originalWeek
+                                ?.lessons
+                                ?.getOrNull(lessonIndex)
+                                ?: lesson
+
+                            val originalDescription = originalWeek?.description
+                                ?: week.description
 
                             val completed = progressRecords.any {
                                 it.step_order == stepOrder && it.is_completed
@@ -596,29 +729,30 @@ fun RoadmapScreen(
 
                             LessonRow(
                                 lessonNumber = lessonIndex + 1,
+
+                                // Display the translated lesson.
                                 lesson = lesson,
+
                                 completed = completed,
                                 onCheckedChange = { checked ->
-                                    val user =
-                                        supabase.auth.currentUserOrNull()
+                                    val user = supabase.auth.currentUserOrNull()
 
                                     if (user == null) {
-                                        errorMessage =
-                                            roadmapScreenText(
-                                                "You must be logged in."
-                                            )
+                                        errorMessage = roadmapScreenText(
+                                            "You must be logged in."
+                                        )
                                         return@LessonRow
                                     }
 
                                     errorMessage = ""
 
-                                    // Update the screen immediately.
+                                    // Save the original text in the progress record.
                                     val updatedRecord = ProgressRecord(
                                         progress_id = null,
                                         roadmap_id = roadmapId,
                                         user_id = user.id,
-                                        step_title = lesson,
-                                        step_description = week.description,
+                                        step_title = originalLesson,
+                                        step_description = originalDescription,
                                         step_order = stepOrder,
                                         is_completed = checked,
                                         completed_at = if (checked) {
@@ -637,13 +771,11 @@ fun RoadmapScreen(
                                     scope.launch {
                                         try {
                                             if (roadmapId.isNotBlank()) {
-                                                // Repository saves locally first,
-                                                // then attempts remote synchronization.
                                                 ProgressRepository.saveProgress(
                                                     roadmapId = roadmapId,
                                                     userId = user.id,
-                                                    stepTitle = lesson,
-                                                    stepDescription = week.description,
+                                                    stepTitle = originalLesson,
+                                                    stepDescription = originalDescription,
                                                     stepOrder = stepOrder,
                                                     isCompleted = checked
                                                 )
@@ -660,7 +792,6 @@ fun RoadmapScreen(
                                                     "Could not save progress."
                                                 )
 
-                                            // Recover from locally saved progress.
                                             if (roadmapId.isNotBlank()) {
                                                 try {
                                                     progressRecords =
@@ -669,8 +800,7 @@ fun RoadmapScreen(
                                                             userId = user.id
                                                         )
                                                 } catch (_: Exception) {
-                                                    // Preserve the current state
-                                                    // if recovery also fails.
+                                                    // Preserve the current state.
                                                 }
                                             }
                                         }
@@ -682,6 +812,7 @@ fun RoadmapScreen(
                                 Spacer(modifier = Modifier.height(8.dp))
                             }
                         }
+
                     }
                 }
             }

@@ -1,5 +1,7 @@
 package com.example.skilllinkapp
 
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.status.SessionStatus
 import com.example.skilllinkapp.LanguageSupport
 import com.example.skilllinkapp.localizedText
 import android.content.Intent
@@ -25,6 +27,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -83,17 +86,45 @@ fun SkillLinkApp() {
 
 
     // =========================================================
-    // LOGIN
-    // =========================================================
+// LOGIN STATE
+// =========================================================
 
     var isLoggedIn by remember {
         mutableStateOf(false)
     }
 
     var showRegister by remember {
+        mutableStateOf(false)
+    }
+
+    var isAuthLoading by remember {
         mutableStateOf(true)
     }
 
+// =========================================================
+// SUPABASE AUTH SESSION
+// =========================================================
+
+    LaunchedEffect(Unit) {
+        supabase.auth.sessionStatus.collect { status ->
+            when (status) {
+                is SessionStatus.Authenticated -> {
+                    isLoggedIn = true
+                    showRegister = false
+                    isAuthLoading = false
+                }
+
+                is SessionStatus.NotAuthenticated -> {
+                    isLoggedIn = false
+                    isAuthLoading = false
+                }
+
+                else -> {
+                    // Keep the loading screen visible.
+                }
+            }
+        }
+    }
 
     // =========================================================
     // MAIN NAVIGATION
@@ -219,6 +250,21 @@ fun SkillLinkApp() {
         }
     }
 
+
+    // =========================================================
+    // AUTHENTICATION LOADING
+    // =========================================================
+
+    if (isAuthLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = androidx.compose.ui.Alignment.Center
+        ) {
+            androidx.compose.material3.CircularProgressIndicator()
+        }
+
+        return
+    }
 
     // =========================================================
     // NOT LOGGED IN
@@ -653,7 +699,7 @@ fun SkillLinkApp() {
                             supabase.auth.signOut()
 
                             isLoggedIn = false
-                            showRegister = true
+                            showRegister = false
 
                             selectedPage = "home"
 
