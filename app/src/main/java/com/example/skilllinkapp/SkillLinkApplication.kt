@@ -1,10 +1,14 @@
 package com.example.skilllinkapp
 
+import com.example.skilllinkapp.notifications.SkillLinkNotificationScheduler
 import android.app.Application
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
+import android.os.Build
 import com.example.skilllinkapp.data.ProgressRepository
 import com.example.skilllinkapp.data.local.SkillLinkDatabase
 import com.example.skilllinkapp.data.supabase
@@ -29,8 +33,15 @@ class SkillLinkApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
+        // Initialize the local Room database
         ProgressRepository.initialize(database.skillLinkDao())
 
+        // Create the notification channel for Firebase notifications
+        createNotificationChannel()
+
+        SkillLinkNotificationScheduler.scheduleWeeklyReminder(this)
+
+        // Monitor internet connectivity for automatic progress synchronization
         val connectivityManager =
             getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
@@ -57,6 +68,24 @@ class SkillLinkApplication : Application() {
         connectivityManager.registerDefaultNetworkCallback(networkCallback)
     }
 
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+
+            val channel = NotificationChannel(
+                NOTIFICATION_CHANNEL_ID,
+                "SkillLink Notifications",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "Learning updates and alerts from SkillLink"
+            }
+
+            val notificationManager =
+                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+
     private fun syncPendingProgressWhenSignedIn() {
         if (!syncInProgress.compareAndSet(false, true)) return
 
@@ -77,5 +106,9 @@ class SkillLinkApplication : Application() {
                 syncInProgress.set(false)
             }
         }
+    }
+
+    companion object {
+        const val NOTIFICATION_CHANNEL_ID = "skilllink_notifications"
     }
 }

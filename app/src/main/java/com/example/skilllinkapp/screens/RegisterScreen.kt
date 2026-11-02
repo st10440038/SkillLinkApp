@@ -1,6 +1,9 @@
 
 package com.example.skilllinkapp.screens
 
+import androidx.compose.ui.platform.LocalContext
+import com.example.skilllinkapp.notifications.SkillLinkNotificationDispatcher
+import com.example.skilllinkapp.notifications.NotificationRepository
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -59,6 +62,8 @@ fun RegisterScreen(
 
     val selectedLanguage by LanguageSupport.currentLanguage
     val scope = rememberCoroutineScope()
+
+    val context = LocalContext.current
 
     val purple = Color(0xFF6C4AB6)
     val lightPurple = Color(0xFFF4F0FF)
@@ -286,6 +291,28 @@ fun RegisterScreen(
                                 "account_created",
                                 selectedLanguage
                             )
+
+                            // Create welcome notification if the user is authenticated
+                            try {
+                                val user = supabase.auth.currentUserOrNull()
+
+                                if (user != null) {
+                                    SkillLinkNotificationDispatcher.send(
+                                        context = context,
+                                        userId = user.id,
+                                        title = "Welcome to SkillLink!",
+                                        message = "Your learning journey starts here. Explore your roadmap and track your progress.",
+                                        notificationType = "welcome",
+                                        preventDuplicates = true
+                                    )
+                                }
+                            } catch (e: Exception) {
+                                android.util.Log.e(
+                                    "SkillLinkNotification",
+                                    "Welcome notification failed",
+                                    e
+                                )
+                            }
                         } catch (e: Exception) {
                             // Preserve backend details to help diagnose failures.
                             registrationSucceeded = false

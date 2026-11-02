@@ -1,6 +1,13 @@
 
 package com.example.skilllinkapp.screens
 
+
+import com.example.skilllinkapp.notifications.SkillLinkNotificationDispatcher
+import kotlinx.serialization.json.jsonObject
+import com.example.skilllinkapp.notifications.SkillLinkNotificationHelper
+import android.util.Log
+import com.example.skilllinkapp.notifications.NotificationRepository
+import com.example.skilllinkapp.notifications.NotificationEventBus
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
@@ -802,6 +809,29 @@ fun GenerateRoadmapScreen(
                             learningPace = learningPace
                         )
 
+                        val roadmapTitle = try {
+                            Json.parseToJsonElement(response)
+                                .jsonObject["title"]
+                                ?.jsonPrimitive
+                                ?.content
+                                ?.takeIf { it.isNotBlank() }
+                                ?: "Your New Roadmap"
+                        } catch (e: Exception) {
+                            "Your New Roadmap"
+                        }
+
+                        val cleanTitle = roadmapTitle
+                            .replace(
+                                Regex("\\s+Roadmap$", RegexOption.IGNORE_CASE),
+                                ""
+                            )
+                            .trim()
+
+                        val notificationTitle = "Your $cleanTitle Roadmap Is Ready!"
+
+                        val notificationMessage =
+                            "Your personalised learning roadmap has been generated successfully. Start learning now!"
+
                         val knownSkillsJson = buildJsonArray {
                             knownSkills
                                 .split(",")
@@ -854,24 +884,58 @@ fun GenerateRoadmapScreen(
                                     )
                                 )
 
+                        // Create a notification after the roadmap is saved.
+                        try {
+                            NotificationRepository.createNotification(
+                                userId = user.id,
+                                title = notificationTitle,
+                                message = notificationMessage,
+                                notificationType = "roadmap_created"
+                            )
+
+                            NotificationEventBus.publish(
+                                title = notificationTitle,
+                                message = notificationMessage
+                            )
+
+                            SkillLinkNotificationHelper.showNotification(
+                                context = context,
+                                title = notificationTitle,
+                                body = notificationMessage
+                            )
+
+                        } catch (e: Exception) {
+                            Log.e(
+                                "SkillLinkNotification",
+                                "Failed to save roadmap notification.",
+                                e
+                            )
+                        }
+
                         generatedRoadmap = response
 
                         onRoadmapGenerated(
                             response,
                             roadmapId
                         )
+
+                        SkillLinkNotificationDispatcher.recordLearningActivity(context)
+
+                        SkillLinkNotificationDispatcher.send(
+                            context = context,
+                            userId = user.id,
+                            title = notificationTitle,
+                            message = notificationMessage,
+                            notificationType = "roadmap_created"
+                        )
+
                     } catch (e: Exception) {
-                        errorMessage = if (
-                            !hasValidatedInternet(context) ||
-                            isNetworkError(e)
-                        ) {
-                            roadmapText(
-                                "No internet connection. Please connect to Wi-Fi or mobile data and try again."
-                            )
+                        Log.e("SkillLinkRoadmap", "Roadmap generation failed", e)
+
+                        errorMessage = if (!hasValidatedInternet(context) || isNetworkError(e)) {
+                            roadmapText("No internet connection. Please check your connection and try again.")
                         } else {
-                            roadmapText(
-                                "We couldn't generate your roadmap right now. Please try again."
-                            )
+                            roadmapText("We couldn't generate your roadmap right now. Please try again.")
                         }
                     } finally {
                         isGenerating = false

@@ -1,15 +1,9 @@
-
 package com.example.skilllinkapp.network
 
+import io.github.jan.supabase.functions.functions
+import com.example.skilllinkapp.data.supabase
+import io.ktor.client.call.body
 import com.example.skilllinkapp.LanguageSupport
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.android.Android
-import io.ktor.client.request.header
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
-import io.ktor.client.statement.bodyAsText
-import io.ktor.http.ContentType
-import io.ktor.http.contentType
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -21,18 +15,6 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
 object GeminiService {
-
-    // TODO: Move the API key to a secure backend before release.
-    // Replace this placeholder with a valid key for local testing.
-    // Never commit a real API key to Git.
-    private const val API_KEY = "AQ.Ab8RN6Ipmtj41k-f_Ie9qazUvvOZDHrg77HUJYKrb49ZV7Nc8Q"
-
-    private const val MODEL = "gemini-3.5-flash-lite"
-
-    private const val URL =
-        "https://generativelanguage.googleapis.com/v1beta/models/$MODEL:generateContent"
-
-    private val client = HttpClient(Android)
 
     private val jsonParser = Json {
         ignoreUnknownKeys = true
@@ -169,67 +151,23 @@ object GeminiService {
      * Both roadmap generation and translation use this same request logic.
      */
     private suspend fun requestGeneratedText(prompt: String): String {
+        val response = supabase.functions.invoke(
+            function = "generate-roadmap",
+            body = buildJsonObject {
+                put("prompt", prompt)
+            }
+        )
 
-        check(API_KEY != "API_KEY_HERE" && API_KEY.isNotBlank()) {
-            "Gemini API key is not configured. Set a valid API key for testing."
-        }
+        val responseJson = response.body<JsonObject>()
 
-        val requestBody = buildJsonObject {
-            put(
-                "contents",
-                buildJsonArray {
-                    add(
-                        buildJsonObject {
-                            put(
-                                "parts",
-                                buildJsonArray {
-                                    add(
-                                        buildJsonObject {
-                                            put("text", prompt)
-                                        }
-                                    )
-                                }
-                            )
-                        }
-                    )
-                }
-            )
-        }
-
-        val response = client.post(URL) {
-            header("x-goog-api-key", API_KEY)
-            contentType(ContentType.Application.Json)
-            setBody(requestBody.toString())
-        }
-
-        val responseText = response.bodyAsText()
-
-        if (response.status.value !in 200..299) {
-            throw IllegalStateException(
-                "Gemini request failed (${response.status.value}): $responseText"
-            )
-        }
-
-        val responseJson = Json.parseToJsonElement(responseText)
-
-        val generatedText = responseJson
-            .jsonObject["candidates"]
-            ?.jsonArray
-            ?.firstOrNull()
-            ?.jsonObject
-            ?.get("content")
-            ?.jsonObject
-            ?.get("parts")
-            ?.jsonArray
-            ?.firstOrNull()
-            ?.jsonObject
-            ?.get("text")
+        val generatedText = responseJson["text"]
             ?.jsonPrimitive
             ?.content
 
         return generatedText
+            ?.takeIf { it.isNotBlank() }
             ?: throw IllegalStateException(
-                "Gemini returned no generated text."
+                "Supabase returned no generated text."
             )
     }
 
@@ -315,5 +253,3 @@ object GeminiService {
         }
     }
 }
-
-// private const val API_KEY = "AQ.Ab8RN6Ipmtj41k-f_Ie9qazUvvOZDHrg77HUJYKrb49ZV7Nc8Q"

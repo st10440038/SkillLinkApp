@@ -1,6 +1,6 @@
 package com.example.skilllinkapp.screens
 
-
+import com.example.skilllinkapp.notifications.SkillLinkNotificationDispatcher
 import com.example.skilllinkapp.network.GeminiService
 import androidx.compose.ui.platform.LocalContext
 import com.example.skilllinkapp.data.RoadmapTranslationCache
@@ -78,7 +78,6 @@ fun RoadmapScreen(
     roadmapId: String = "",
     onBack: () -> Unit
 ) {
-
 
     val context = LocalContext.current
     val selectedLanguage by LanguageSupport.currentLanguage
@@ -746,6 +745,9 @@ fun RoadmapScreen(
 
                                     errorMessage = ""
 
+                                    val wasCompleted = completed
+                                    val previousCompletedCount = completedLessons
+
                                     // Save the original text in the progress record.
                                     val updatedRecord = ProgressRecord(
                                         progress_id = null,
@@ -768,9 +770,12 @@ fun RoadmapScreen(
                                         }
                                         .plus(updatedRecord)
 
+
                                     scope.launch {
                                         try {
                                             if (roadmapId.isNotBlank()) {
+
+                                                // Save progress.
                                                 ProgressRepository.saveProgress(
                                                     roadmapId = roadmapId,
                                                     userId = user.id,
@@ -780,25 +785,98 @@ fun RoadmapScreen(
                                                     isCompleted = checked
                                                 )
 
-                                                progressRecords =
+                                                // Refresh progress.
+                                                val refreshedProgress =
                                                     ProgressRepository.getProgress(
                                                         roadmapId = roadmapId,
                                                         userId = user.id
                                                     )
+
+                                                progressRecords = refreshedProgress
+
+                                                // Notifications only when a lesson becomes completed.
+                                                if (checked && !wasCompleted) {
+
+                                                    SkillLinkNotificationDispatcher.recordLearningActivity(
+                                                        context
+                                                    )
+
+                                                    // Lesson completed notification.
+                                                    SkillLinkNotificationDispatcher.send(
+                                                        context = context,
+                                                        userId = user.id,
+                                                        title = "Lesson completed: $originalLesson",
+                                                        message = "Great work! You've completed $originalLesson.",
+                                                        notificationType = "progress_updated",
+                                                        preventDuplicates = true
+                                                    )
+
+                                                    // Count completed lessons using their actual step orders.
+                                                    val newCompletedCount = roadmap.weeks
+                                                        .flatMapIndexed { weekIndex, week ->
+                                                            week.lessons.mapIndexed { lessonIndex, _ ->
+                                                                val order = (weekIndex * 3) + lessonIndex + 1
+
+                                                                refreshedProgress.any {
+                                                                    it.step_order == order && it.is_completed
+                                                                }
+                                                            }
+                                                        }
+                                                        .count { it }
+
+                                                    val roadmapTitle = roadmap.title
+
+                                                    // Roadmap completed notification.
+                                                    if (
+                                                        totalLessons > 0 &&
+                                                        newCompletedCount == totalLessons &&
+                                                        previousCompletedCount < totalLessons
+                                                    ) {
+                                                        SkillLinkNotificationDispatcher.send(
+                                                            context = context,
+                                                            userId = user.id,
+                                                            title = "You completed $roadmapTitle!",
+                                                            message = "Congratulations! You've completed every lesson in this roadmap.",
+                                                            notificationType = "roadmap_completed",
+                                                            preventDuplicates = true
+                                                        )
+                                                    } else if (totalLessons > 0) {
+
+                                                        // Milestone notifications.
+                                                        val previousPercentage =
+                                                            previousCompletedCount * 100 / totalLessons
+
+                                                        val newPercentage =
+                                                            newCompletedCount * 100 / totalLessons
+
+                                                        val milestonesReached = listOf(25, 50, 75).filter {
+                                                            previousPercentage < it &&
+                                                                    newPercentage >= it
+                                                        }
+
+                                                        milestonesReached.forEach { milestone ->
+                                                            SkillLinkNotificationDispatcher.send(
+                                                                context = context,
+                                                                userId = user.id,
+                                                                title = "You're $milestone% through $roadmapTitle!",
+                                                                message = "Keep going! You've reached a new learning milestone.",
+                                                                notificationType = "milestone_reached",
+                                                                preventDuplicates = true
+                                                            )
+                                                        }
+                                                    }
+                                                }
                                             }
                                         } catch (e: Exception) {
                                             errorMessage = e.message
-                                                ?: roadmapScreenText(
-                                                    "Could not save progress."
-                                                )
+                                                ?: roadmapScreenText("Could not save progress.")
 
                                             if (roadmapId.isNotBlank()) {
                                                 try {
-                                                    progressRecords =
-                                                        ProgressRepository.getProgress(
-                                                            roadmapId = roadmapId,
-                                                            userId = user.id
-                                                        )
+                                                    progressRecords = ProgressRepository.getProgress(
+                                                        roadmapId = roadmapId,
+                                                        userId = user.id
+                                                    )
                                                 } catch (_: Exception) {
                                                     // Preserve the current state.
                                                 }
@@ -812,7 +890,6 @@ fun RoadmapScreen(
                                 Spacer(modifier = Modifier.height(8.dp))
                             }
                         }
-
                     }
                 }
             }

@@ -1,6 +1,16 @@
 
 package com.example.skilllinkapp.screens
 
+import android.content.Context
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.Switch
+import androidx.core.content.ContextCompat
+import com.google.firebase.messaging.FirebaseMessaging
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -167,7 +177,102 @@ fun SettingsScreen(
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    // Save the notification preference locally
+    val notificationPreferences = remember {
+        context.getSharedPreferences("skilllink_preferences", Context.MODE_PRIVATE)
+    }
 
+    var notificationsEnabled by remember {
+        mutableStateOf(
+            notificationPreferences.getBoolean("notifications_enabled", false)
+        )
+    }
+
+    // Subscribe to the Firebase notification topic
+    fun subscribeToNotifications() {
+        FirebaseMessaging.getInstance()
+            .subscribeToTopic("skilllink_updates")
+            .addOnSuccessListener {
+                notificationPreferences.edit()
+                    .putBoolean("notifications_enabled", true)
+                    .apply()
+
+                notificationsEnabled = true
+
+                Toast.makeText(
+                    context,
+                    "Notifications enabled",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            .addOnFailureListener {
+                Toast.makeText(
+                    context,
+                    "Unable to enable notifications",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+    }
+
+    // Request Android notification permission
+    val notificationPermissionLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission()
+        ) { isGranted ->
+            if (isGranted) {
+                subscribeToNotifications()
+            } else {
+                Toast.makeText(
+                    context,
+                    "Notification permission is required",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+
+    // Handle enabling and disabling notifications
+    fun handleNotificationToggle(enabled: Boolean) {
+        if (enabled) {
+            val permissionGranted =
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                !permissionGranted
+            ) {
+                notificationPermissionLauncher.launch(
+                    Manifest.permission.POST_NOTIFICATIONS
+                )
+            } else {
+                subscribeToNotifications()
+            }
+        } else {
+            FirebaseMessaging.getInstance()
+                .unsubscribeFromTopic("skilllink_updates")
+                .addOnSuccessListener {
+                    notificationPreferences.edit()
+                        .putBoolean("notifications_enabled", false)
+                        .apply()
+
+                    notificationsEnabled = false
+
+                    Toast.makeText(
+                        context,
+                        "Notifications disabled",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+                .addOnFailureListener {
+                    Toast.makeText(
+                        context,
+                        "Unable to update notification settings",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+        }
+    }
     var showPasswordDialog by remember { mutableStateOf(false) }
     var showHelpDialog by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
@@ -322,12 +427,53 @@ fun SettingsScreen(
 
             SettingsDivider()
 
-            SettingsItem(
-                icon = "♧",
-                title = settingsText("Notifications"),
-                subtitle = settingsText("Manage learning alerts"),
-                onClick = { /* Future feature */ }
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(SkillLinkLightPurple),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "♧",
+                        color = SkillLinkPurple,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                Spacer(modifier = Modifier.size(14.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = settingsText("Notifications"),
+                        color = SkillLinkNavy,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    Spacer(modifier = Modifier.height(3.dp))
+
+                    Text(
+                        text = settingsText("Manage learning alerts"),
+                        color = Color(0xFF85849A),
+                        fontSize = 12.sp
+                    )
+                }
+
+                Switch(
+                    checked = notificationsEnabled,
+                    onCheckedChange = { enabled ->
+                        handleNotificationToggle(enabled)
+                    }
+                )
+            }
 
             SettingsDivider()
 

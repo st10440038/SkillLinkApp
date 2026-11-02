@@ -1,5 +1,7 @@
 package com.example.skilllinkapp.data
 
+import io.github.jan.supabase.functions.functions
+import io.github.jan.supabase.functions.Functions
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.postgrest.Postgrest
@@ -16,4 +18,6 @@ val supabase = createSupabaseClient(
     install(Postgrest)
 
     httpEngine = Android.create()
+
+    install(Functions)
 }
