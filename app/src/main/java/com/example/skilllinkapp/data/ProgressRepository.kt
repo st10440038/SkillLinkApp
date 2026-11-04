@@ -94,7 +94,8 @@ object ProgressRepository {
      */
     suspend fun getProgress(
         roadmapId: String,
-        userId: String
+        userId: String,
+        syncPending: Boolean = true
     ): List<ProgressRecord> {
         val database = localDao()
 
@@ -138,8 +139,10 @@ object ProgressRepository {
                 database.saveProgressRecords(recordsToCache)
             }
 
-            // Retry unsynchronized changes for this account.
-            syncPendingProgress(userId)
+            // Synchronize pending changes only when requested.
+            if (syncPending) {
+                syncPendingProgress(userId)
+            }
 
             // Room remains the source displayed to the UI.
             database.getProgress(roadmapId, userId).map {

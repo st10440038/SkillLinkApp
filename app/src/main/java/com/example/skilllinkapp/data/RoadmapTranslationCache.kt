@@ -1,4 +1,3 @@
-
 package com.example.skilllinkapp.data
 
 import android.content.Context
@@ -15,7 +14,7 @@ object RoadmapTranslationCache {
         )
 
     private fun cacheKey(roadmapId: String, language: String): String {
-        return "${roadmapId}_${language}"
+        return "v2_${roadmapId}_${language}"
     }
 
     fun get(

@@ -348,11 +348,13 @@ fun SettingsScreen(
                         .background(Color.White),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "S",
-                        color = SkillLinkPurple,
-                        fontSize = 23.sp,
-                        fontWeight = FontWeight.Bold
+                    ProfileAvatar(
+                        userId = currentUser?.id,
+                        fallbackText = "S",
+                        modifier = Modifier.size(58.dp),
+                        size = 58.dp,
+                        backgroundColor = Color.White,
+                        textColor = SkillLinkPurple
                     )
                 }
 

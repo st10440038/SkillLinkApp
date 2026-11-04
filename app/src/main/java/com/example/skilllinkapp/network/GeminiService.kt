@@ -113,34 +113,64 @@ object GeminiService {
             "Unsupported language: $targetLanguage"
         }
 
-        // Reject invalid input before sending it to Gemini.
         validateRoadmapJson(roadmapJson)
 
+        if (targetLanguage == "English") {
+            return roadmapJson
+        }
+
         val prompt = """
-            Translate the following learning roadmap into $targetLanguage.
+        You are a professional multilingual educational translator.
 
-            STRICT RULES:
-            1. Translate the title and summary.
-            2. Translate every week title and description.
-            3. Translate every lesson.
-            4. Keep JSON property names in English:
-               title, summary, weeks, description, lessons.
-            5. Preserve the exact number and order of weeks and lessons.
-            6. Do not add, remove, summarize, or reorder content.
-            7. Preserve the original meaning and level of detail.
-            8. Keep technical terms, programming keywords, product names,
-               and proper nouns unchanged when translating them would
-               make the content inaccurate.
-            9. Return ONLY valid JSON without Markdown fences or commentary.
-            10. Make sure the result can be parsed as JSON.
+        YOUR TASK:
+        Translate the entire learning roadmap into $targetLanguage.
 
-            Roadmap JSON:
-            $roadmapJson
-        """.trimIndent()
+        LANGUAGE REQUIREMENT:
+        The output MUST be written in $targetLanguage.
+
+        Translate ALL learner-facing content, including:
+        - Roadmap title
+        - Roadmap summary
+        - Every week title
+        - Every week description
+        - Every lesson title and description, if present
+
+        IMPORTANT:
+        1. Do not leave ordinary English sentences untranslated.
+        2. Do not return the original English roadmap.
+        3. Do not summarize or shorten the content.
+        4. Preserve the original meaning and detail.
+        5. Keep technical terms, programming keywords and product
+           names in English where appropriate.
+        6. Keep JSON property names unchanged.
+        7. Preserve the exact number and order of weeks.
+        8. Preserve exactly three lessons per week.
+        9. Do not add or remove any content.
+        10. Return valid JSON only. No Markdown or explanations.
+
+        REQUIRED JSON STRUCTURE:
+        {
+          "title": "Translated roadmap title",
+          "summary": "Translated roadmap summary",
+          "weeks": [
+            {
+              "title": "Translated week title",
+              "description": "Translated description",
+              "lessons": [
+                "Translated lesson 1",
+                "Translated lesson 2",
+                "Translated lesson 3"
+              ]
+            }
+          ]
+        }
+
+        ORIGINAL ROADMAP:
+        $roadmapJson
+    """.trimIndent()
 
         val translatedText = requestGeneratedText(prompt)
 
-        // Never return or cache malformed or structurally changed JSON.
         validateRoadmapJson(translatedText)
 
         return translatedText
@@ -151,6 +181,7 @@ object GeminiService {
      * Both roadmap generation and translation use this same request logic.
      */
     private suspend fun requestGeneratedText(prompt: String): String {
+
         val response = supabase.functions.invoke(
             function = "generate-roadmap",
             body = buildJsonObject {

@@ -1,3 +1,4 @@
+
 package com.example.skilllinkapp.notifications
 
 import android.content.Context
@@ -11,7 +12,7 @@ object SkillLinkNotificationDispatcher {
         title: String,
         message: String,
         notificationType: String,
-        preventDuplicates: Boolean = false
+        preventDuplicates: Boolean = true
     ) {
         if (preventDuplicates) {
             try {
@@ -25,11 +26,12 @@ object SkillLinkNotificationDispatcher {
                     return
                 }
             } catch (e: Exception) {
-                Log.w(
+                Log.e(
                     "SkillLinkNotification",
-                    "Could not check for an existing notification.",
+                    "Could not check for duplicate notification.",
                     e
                 )
+                return
             }
         }
 
@@ -46,6 +48,7 @@ object SkillLinkNotificationDispatcher {
                 "Could not save notification history.",
                 e
             )
+            return
         }
 
         NotificationEventBus.publish(
@@ -72,9 +75,7 @@ object SkillLinkNotificationDispatcher {
             .apply()
     }
 
-    const val LAST_LEARNING_ACTIVITY =
-        "last_learning_activity"
+    const val LAST_LEARNING_ACTIVITY = "last_learning_activity"
 
-    const val LAST_WEEKLY_REMINDER =
-        "last_weekly_reminder_at"
+    const val LAST_WEEKLY_REMINDER = "last_weekly_reminder_at"
 }

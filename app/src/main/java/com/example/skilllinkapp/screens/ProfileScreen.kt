@@ -202,21 +202,14 @@ fun ProfileScreen(
                     .background(SkillLinkPurple),
                 contentAlignment = Alignment.Center
             ) {
-                if (initials.isNotEmpty()) {
-                    Text(
-                        text = initials,
-                        color = Color.White,
-                        fontSize = 30.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = profileScreenText("Profile picture"),
-                        modifier = Modifier.size(42.dp),
-                        tint = Color.White
-                    )
-                }
+                ProfileAvatar(
+                    userId = user?.id,
+                    fallbackText = initials,
+                    modifier = Modifier.size(92.dp),
+                    size = 92.dp,
+                    backgroundColor = SkillLinkPurple,
+                    textColor = Color.White
+                )
             }
         }
 

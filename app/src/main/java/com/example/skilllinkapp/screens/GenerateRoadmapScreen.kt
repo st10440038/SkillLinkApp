@@ -1,7 +1,10 @@
 
 package com.example.skilllinkapp.screens
 
-
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
+import com.example.skilllinkapp.R
 import com.example.skilllinkapp.notifications.SkillLinkNotificationDispatcher
 import kotlinx.serialization.json.jsonObject
 import com.example.skilllinkapp.notifications.SkillLinkNotificationHelper
@@ -465,20 +468,14 @@ fun GenerateRoadmapScreen(
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
+                Image(
+                    painter = painterResource(id = R.drawable.skilllink_logo),
+                    contentDescription = "SkillLink logo",
                     modifier = Modifier
                         .size(50.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.18f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "S",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
 
                 Spacer(modifier = Modifier.width(14.dp))
 

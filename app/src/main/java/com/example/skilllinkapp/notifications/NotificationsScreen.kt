@@ -1,5 +1,8 @@
 package com.example.skilllinkapp.notifications
 
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -25,6 +28,16 @@ fun NotificationsScreen(
 ) {
 
     val scope = rememberCoroutineScope()
+
+    val context = LocalContext.current
+
+    var deletingNotificationIds by remember {
+        mutableStateOf<Set<String>>(emptySet())
+    }
+
+    var notificationToDelete by remember {
+        mutableStateOf<Notification?>(null)
+    }
 
     var notifications by remember {
         mutableStateOf<List<Notification>>(emptyList())
@@ -394,6 +407,26 @@ fun NotificationsScreen(
                                                 )
                                             }
                                         }
+
+                                        IconButton(
+                                            enabled = notification.notificationId !in deletingNotificationIds,
+                                            onClick = {
+                                                notificationToDelete = notification
+                                            }
+                                        ) {
+                                            if (notification.notificationId in deletingNotificationIds) {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.size(18.dp),
+                                                    strokeWidth = 2.dp
+                                                )
+                                            } else {
+                                                Icon(
+                                                    imageVector = Icons.Default.Delete,
+                                                    contentDescription = "Delete notification",
+                                                    tint = MaterialTheme.colorScheme.error
+                                                )
+                                            }
+                                        }
                                     }
 
                                     Spacer(
@@ -412,5 +445,79 @@ fun NotificationsScreen(
                 }
             }
         }
+    }
+
+    notificationToDelete?.let { notification ->
+
+        AlertDialog(
+            onDismissRequest = {
+                notificationToDelete = null
+            },
+            title = {
+                Text("Delete notification?")
+            },
+            text = {
+                Text(
+                    "Are you sure you want to permanently delete this notification? This action cannot be undone."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        scope.launch {
+                            val notificationId = notification.notificationId
+
+                            deletingNotificationIds =
+                                deletingNotificationIds + notificationId
+
+                            try {
+                                NotificationRepository.deleteNotification(
+                                    notificationId = notificationId,
+                                    userId = notification.userId
+                                )
+
+                                val updatedNotifications =
+                                    notifications.filterNot {
+                                        it.notificationId == notificationId
+                                    }
+
+                                notifications = updatedNotifications
+
+                                onUnreadCountChanged(
+                                    updatedNotifications.count { !it.isRead }
+                                )
+
+                                notificationToDelete = null
+
+                            } catch (e: Exception) {
+                                Toast.makeText(
+                                    context,
+                                    "Unable to delete notification. Please try again.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+
+                            } finally {
+                                deletingNotificationIds =
+                                    deletingNotificationIds - notificationId
+                            }
+                        }
+                    }
+                ) {
+                    Text(
+                        "Delete",
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        notificationToDelete = null
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }

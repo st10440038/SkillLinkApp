@@ -19,7 +19,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.skilllinkapp"
-        minSdk = 36
+        minSdk = 26
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -88,4 +88,5 @@ dependencies {
 
     implementation("io.github.jan-tennert.supabase:functions-kt:3.0.1")
     implementation("androidx.work:work-runtime-ktx:2.10.5")
+
 }

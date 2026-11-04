@@ -320,11 +320,13 @@ fun HomeScreen(
                     .background(SkillLinkLightPurple),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "S",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = SkillLinkPurple,
-                    fontWeight = FontWeight.Bold
+                ProfileAvatar(
+                    userId = supabase.auth.currentUserOrNull()?.id,
+                    fallbackText = "S",
+                    modifier = Modifier.size(40.dp),
+                    size = 40.dp,
+                    backgroundColor = Color.White,
+                    textColor = SkillLinkPurple
                 )
             }
         }

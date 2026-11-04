@@ -1,6 +1,16 @@
 
 package com.example.skilllinkapp.screens
 
+import androidx.compose.material3.TextButton
+import com.example.skilllinkapp.data.ProfilePictureRepository
+import kotlinx.serialization.json.JsonNull
+import android.graphics.BitmapFactory
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.graphics.asImageBitmap
+import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -91,6 +101,21 @@ fun EditProfileScreen(
     onBack: () -> Unit,
     onSave: () -> Unit
 ) {
+    var selectedImageUri by remember {
+        mutableStateOf<Uri?>(null)
+    }
+
+    var selectedImageBitmap by remember {
+        mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
+    }
+
+    var imageBytes by remember {
+        mutableStateOf<ByteArray?>(null)
+    }
+
+    var removeProfilePicture by remember { mutableStateOf(false) }
+    var hasSavedProfilePicture by remember { mutableStateOf(false) }
+
     var fullName by remember { mutableStateOf("") }
     var biography by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
@@ -101,6 +126,44 @@ fun EditProfileScreen(
     val coroutineScope = rememberCoroutineScope()
     val user = supabase.auth.currentUserOrNull()
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    val photoPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            try {
+                context.contentResolver.openInputStream(uri)?.use { stream ->
+                    val originalBytes = stream.readBytes()
+
+                    val bitmap = BitmapFactory.decodeByteArray(
+                        originalBytes,
+                        0,
+                        originalBytes.size
+                    )
+
+                    if (bitmap != null) {
+                        val outputStream = java.io.ByteArrayOutputStream()
+
+                        removeProfilePicture = false
+
+                        bitmap.compress(
+                            android.graphics.Bitmap.CompressFormat.JPEG,
+                            85,
+                            outputStream
+                        )
+
+                        imageBytes = outputStream.toByteArray()
+                        selectedImageUri = uri
+                        selectedImageBitmap = bitmap.asImageBitmap()
+                    }
+                }
+            } catch (e: Exception) {
+                println("Profile image selection error: ${e.message}")
+            }
+        }
+    }
+
     BackHandler {
         onBack()
     }
@@ -108,6 +171,28 @@ fun EditProfileScreen(
     LaunchedEffect(Unit) {
         try {
             if (user != null) {
+
+                // Load the local picture first, including when offline.
+                val cachedBytes =
+                    ProfilePictureRepository.loadCachedProfilePicture(
+                        context = context,
+                        userId = user.id
+                    )
+
+                if (cachedBytes != null) {
+                    val cachedBitmap = BitmapFactory.decodeByteArray(
+                        cachedBytes,
+                        0,
+                        cachedBytes.size
+                    )
+
+                    if (cachedBitmap != null) {
+                        selectedImageBitmap = cachedBitmap.asImageBitmap()
+                        hasSavedProfilePicture = true
+                    }
+                }
+
+                // Then try loading the latest profile information from Supabase.
                 val profile = supabase
                     .from("profiles")
                     .select {
@@ -133,6 +218,48 @@ fun EditProfileScreen(
                         ?.toString()
                         ?.removeSurrounding("\"")
                         ?: ""
+
+                    val imagePath = profile["profile_image"]
+                        ?.toString()
+                        ?.removeSurrounding("\"")
+
+                    if (!imagePath.isNullOrBlank()) {
+                        val accessToken = supabase.auth.currentSessionOrNull()
+                            ?.accessToken
+
+                        if (!accessToken.isNullOrBlank()) {
+                            val bytes = ProfilePictureRepository.downloadProfilePicture(
+                                path = imagePath,
+                                accessToken = accessToken
+                            )
+
+                            val bitmap = BitmapFactory.decodeByteArray(
+                                bytes,
+                                0,
+                                bytes.size
+                            )
+
+                            if (bitmap != null) {
+                                selectedImageBitmap = bitmap.asImageBitmap()
+                                hasSavedProfilePicture = true
+
+                                ProfilePictureRepository.saveCachedProfilePicture(
+                                    context = context,
+                                    userId = user.id,
+                                    imageBytes = bytes
+                                )
+                            }
+                        }
+                    }
+                    else {
+                        ProfilePictureRepository.deleteCachedProfilePicture(
+                            context = context,
+                            userId = user.id
+                        )
+
+                        selectedImageBitmap = null
+                        hasSavedProfilePicture = false
+                    }
                 }
             }
         } catch (e: Exception) {
@@ -195,12 +322,22 @@ fun EditProfileScreen(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(100.dp)
+                        .size(110.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF7656E8)),
+                        .background(Color(0xFF7656E8))
+                        .clickable {
+                            photoPicker.launch("image/*")
+                        },
                     contentAlignment = Alignment.Center
                 ) {
-                    if (initials.isNotEmpty()) {
+                    if (selectedImageBitmap != null) {
+                        Image(
+                            bitmap = selectedImageBitmap!!,
+                            contentDescription = "Selected profile picture",
+                            modifier = Modifier.fillMaxSize()
+                                .clip(CircleShape)
+                        )
+                    } else if (initials.isNotEmpty()) {
                         Text(
                             text = initials,
                             color = Color.White,
@@ -213,6 +350,33 @@ fun EditProfileScreen(
                             contentDescription = editProfileText("Profile picture"),
                             modifier = Modifier.size(50.dp),
                             tint = Color.White
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Tap to choose a profile picture",
+                    color = Color(0xFF7656E8),
+                    fontSize = 13.sp,
+                    modifier = Modifier.clickable {
+                        photoPicker.launch("image/*")
+                    }
+                )
+
+                if (selectedImageBitmap != null || hasSavedProfilePicture) {
+                    TextButton(
+                        onClick = {
+                            selectedImageBitmap = null
+                            imageBytes = null
+                            removeProfilePicture = true
+                            hasSavedProfilePicture = false
+                        }
+                    ) {
+                        Text(
+                            text = "Remove profile picture",
+                            color = Color(0xFFD32F2F)
                         )
                     }
                 }
@@ -298,6 +462,26 @@ fun EditProfileScreen(
 
                         coroutineScope.launch {
                             try {
+                                val accessToken = supabase.auth.currentSessionOrNull()
+                                    ?.accessToken
+                                    ?: throw Exception("Your session has expired. Please log in again.")
+
+                                var uploadedPath: String? = null
+
+                                if (imageBytes != null) {
+                                    uploadedPath =
+                                        ProfilePictureRepository.uploadProfilePicture(
+                                            userId = user.id,
+                                            accessToken = accessToken,
+                                            imageBytes = imageBytes!!
+                                        )
+                                } else if (removeProfilePicture) {
+                                    ProfilePictureRepository.deleteProfilePicture(
+                                        accessToken = accessToken,
+                                        userId = user.id
+                                    )
+                                }
+
                                 supabase
                                     .from("profiles")
                                     .update(
@@ -305,6 +489,12 @@ fun EditProfileScreen(
                                             put("full_name", fullName.trim())
                                             put("biography", biography.trim())
                                             put("location", location.trim())
+
+                                            if (uploadedPath != null) {
+                                                put("profile_image", uploadedPath)
+                                            } else if (removeProfilePicture) {
+                                                put("profile_image", JsonNull)
+                                            }
                                         }
                                     ) {
                                         filter {
@@ -312,11 +502,28 @@ fun EditProfileScreen(
                                         }
                                     }
 
+                                if (imageBytes != null) {
+                                    ProfilePictureRepository.saveCachedProfilePicture(
+                                        context = context,
+                                        userId = user.id,
+                                        imageBytes = imageBytes!!
+                                    )
+                                } else if (removeProfilePicture) {
+                                    ProfilePictureRepository.deleteCachedProfilePicture(
+                                        context = context,
+                                        userId = user.id
+                                    )
+                                }
+
                                 onSave()
+
                             } catch (e: Exception) {
-                                println(
-                                    "Edit profile save error: ${e.message}"
-                                )
+                                println("Edit profile save error: ${e.message}")
+                                android.widget.Toast.makeText(
+                                    context,
+                                    "Unable to save profile: ${e.message}",
+                                    android.widget.Toast.LENGTH_LONG
+                                ).show()
                             } finally {
                                 isSaving = false
                             }

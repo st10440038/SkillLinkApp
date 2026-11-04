@@ -1,5 +1,12 @@
 package com.example.skilllinkapp.screens
 
+import androidx.compose.ui.platform.LocalContext
+
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import android.util.Log
+import kotlinx.coroutines.launch
 import com.example.skilllinkapp.data.RoadmapTranslationCache
 import com.example.skilllinkapp.network.GeminiService
 import kotlinx.serialization.json.decodeFromJsonElement
@@ -274,12 +281,32 @@ fun MyLearningScreen(
 
             // Show the cached list without waiting for Supabase.
             isLoading = false
+
+            val cachedProgressMap = mutableMapOf<String, Pair<Int, Int>>()
+
+            for (roadmap in roadmaps) {
+                val id = roadmap["roadmap_id"]?.jsonPrimitive?.content ?: continue
+
+                val progress = ProgressRepository.getCachedProgress(
+                    roadmapId = id,
+                    userId = user.id
+                )
+
+                val totalLessons = countLessons(roadmap)
+
+                cachedProgressMap[id] = Pair(
+                    progress.count { it.is_completed },
+                    totalLessons
+                )
+            }
+
+            roadmapProgress = cachedProgressMap
         } catch (cacheError: Exception) {
             roadmaps = emptyList()
         }
 
         // Offline fast path: calculate progress locally and skip
-// every Supabase request when there is no validated connection.
+        // every Supabase request when there is no validated connection.
         if (!hasInternetConnection(context)) {
             val localProgressMap =
                 mutableMapOf<String, Pair<Int, Int>>()
@@ -406,38 +433,42 @@ fun MyLearningScreen(
         }
 
 
-        // 3. Refresh progress using the existing repository.
-        val progressMap = mutableMapOf<String, Pair<Int, Int>>()
+        // 3. Refresh progress silently in the background.
+        isLoading = false
 
-        for (roadmap in roadmaps) {
-            try {
+        roadmaps.forEach { roadmap ->
+            launch {
                 val id = roadmap["roadmap_id"]
                     ?.jsonPrimitive
-                    ?.content
-                    ?: continue
+                    ?.content ?: return@launch
 
                 val data = roadmap["roadmap_data"]
-                    ?: continue
+                    ?: return@launch
 
-                val roadmapObject = parseRoadmapData(data)
-                val totalLessons = countLessons(roadmapObject)
+                try {
+                    val totalLessons = countLessons(parseRoadmapData(data))
 
-                val progress = ProgressRepository.getProgress(
-                    roadmapId = id,
-                    userId = user.id
-                )
+                    val progress = ProgressRepository.getProgress(
+                        roadmapId = id,
+                        userId = user.id,
+                        syncPending = false
+                    )
 
-                progressMap[id] = Pair(
-                    progress.count { it.is_completed },
-                    totalLessons
-                )
-            } catch (_: Exception) {
-                // Keep the roadmap visible if progress cannot load.
+                    roadmapProgress = roadmapProgress + (
+                            id to Pair(
+                                progress.count { it.is_completed },
+                                totalLessons
+                            )
+                            )
+                } catch (e: Exception) {
+                    Log.w("MyLearningScreen", "Progress refresh failed.", e)
+                }
             }
         }
 
-        roadmapProgress = progressMap
-        isLoading = false
+        launch {
+            ProgressRepository.syncPendingProgress(user.id)
+        }
     }
 
 
@@ -486,6 +517,11 @@ fun MyLearningScreen(
                     val translatedJson = if (cachedTranslation != null) {
                         cachedTranslation
                     } else {
+                        Log.d(
+                            "RoadmapTranslation",
+                            "Selected language: $selectedLanguage | Target: $languageName"
+                        )
+
                         // Translate the roadmap content when no cache exists.
                         val result = GeminiService.translateRoadmap(
                             roadmapJson = originalRoadmap.toString(),
@@ -518,11 +554,24 @@ fun MyLearningScreen(
                     }
 
                     translatedResults[id] = translatedObject
+
                 } catch (e: Exception) {
-                    // Keep this roadmap visible in its original language
-                    // if translation fails.
+
+                    android.util.Log.e(
+                        "RoadmapTranslation",
+                        "Translation failed for roadmap $id " +
+                                "in language $languageName",
+                        e
+                    )
+
                     translatedResults[id] = parseRoadmapData(data)
                 }
+            }
+
+            if (selectedLanguage == LanguageSupport.ENGLISH) {
+                translatedRoadmaps = emptyMap()
+                translatingRoadmaps = false
+                return@LaunchedEffect
             }
         } finally {
             translatedRoadmaps = translatedResults
@@ -1059,7 +1108,7 @@ fun MyLearningScreen(
 
                                     onOpenRoadmap(
                                         roadmapId,
-                                        roadmapObject.toString()
+                                        originalRoadmapObject.toString()
                                     )
                                 },
 

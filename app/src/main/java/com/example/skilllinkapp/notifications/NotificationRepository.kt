@@ -51,6 +51,20 @@ object NotificationRepository {
             }
     }
 
+    suspend fun deleteNotification(
+        notificationId: String,
+        userId: String
+    ) {
+        supabase
+            .from("notifications")
+            .delete {
+                filter {
+                    eq("notification_id", notificationId)
+                    eq("user_id", userId)
+                }
+            }
+    }
+
     suspend fun hasNotification(
         userId: String,
         title: String,
