@@ -364,6 +364,34 @@ Notification delivery depends on device permissions, network connectivity and Fi
 
 ---
 
+## Automated Testing
+
+SkillLink includes automated unit and Android instrumentation tests to verify important application functionality.
+
+---
+
+### Unit Tests
+The `LanguageSupportTest.kt` file tests:
+- English, isiZulu and Afrikaans translations.
+- Fallback behaviour for missing translations.
+- Localised learning progress messages.
+
+### Room Database Instrumentation Tests
+The `SkillLinkDatabaseTest.kt` file tests:
+- Saving and retrieving lesson progress.
+- Updating existing lesson progress.
+- Removing synchronised progress from the pending synchronisation list.
+
+### Continuous Integration
+
+GitHub Actions is configured to automatically execute the unit tests and Android instrumentation tests. The workflow runs on pushes and pull requests targeting the main development branches.
+
+**Workflow:** `.github/workflows/android-tests.yml`
+
+**Test result:** Successful – all configured test jobs passed.
+
+---
+
 ## Installation
 
 ### Requirements
