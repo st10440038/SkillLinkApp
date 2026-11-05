@@ -1,5 +1,15 @@
 # SkillLink
 
+---
+
+## Video Demonstration
+
+The video presentation demonstrates SkillLink's main functionality, including authentication, AI roadmap generation, multilingual support, offline functionality, progress tracking, notifications and application settings.
+
+**Video presentation:** [https://www.youtube.com/watch?v=xaousjsazW0]
+
+---
+
 ### Personalised Learning. Structured Progress. AI-Powered Roadmaps.
 
 SkillLink is a native Android learning application developed using Kotlin and Jetpack Compose. It uses artificial intelligence to generate personalised learning roadmaps based on users' learning goals, existing knowledge, experience levels, available study time, and preferred learning pace.
@@ -501,14 +511,6 @@ com.example.skilllinkapp
 ```
 
 The structure above illustrates the main functional areas. Refer to the repository for the complete implementation and actual source files.
-
----
-
-## Video Demonstration
-
-The video presentation demonstrates SkillLink's main functionality, including authentication, AI roadmap generation, multilingual support, offline functionality, progress tracking, notifications and application settings.
-
-**Video presentation:** [Insert your YouTube or Google Drive video link here]
 
 ---
 
