@@ -95,25 +95,55 @@ fun RoadmapScreen(
     val context = LocalContext.current
     val selectedLanguage by LanguageSupport.currentLanguage
 
-    var displayedRoadmapJson by remember(roadmapId) {
-        mutableStateOf(roadmapJson)
+    var displayedRoadmapJson by remember(roadmapId, selectedLanguage) {
+        mutableStateOf(
+            if (selectedLanguage == LanguageSupport.ENGLISH) {
+                roadmapJson
+            } else {
+                ""
+            }
+        )
     }
 
-    var isTranslating by remember {
-        mutableStateOf(false)
+    var isTranslating by remember(roadmapId, selectedLanguage) {
+        mutableStateOf(
+            roadmapJson.isNotBlank() &&
+                    selectedLanguage != LanguageSupport.ENGLISH
+        )
     }
 
-    var translationError by remember {
+    var translationError by remember(roadmapId, selectedLanguage) {
         mutableStateOf<String?>(null)
     }
 
-    LaunchedEffect(roadmapId, roadmapJson, selectedLanguage) {
-        displayedRoadmapJson = roadmapJson
+    var translationRetry by remember(roadmapId, selectedLanguage) {
+        mutableStateOf(0)
+    }
+
+    LaunchedEffect(
+        roadmapId,
+        roadmapJson,
+        selectedLanguage,
+        translationRetry
+    ) {
         translationError = null
 
         if (roadmapJson.isBlank()) {
+            displayedRoadmapJson = ""
+            isTranslating = false
             return@LaunchedEffect
         }
+
+        // English roadmaps can be displayed immediately.
+        if (selectedLanguage == LanguageSupport.ENGLISH) {
+            displayedRoadmapJson = roadmapJson
+            isTranslating = false
+            return@LaunchedEffect
+        }
+
+        // Do not display the original English roadmap while translating.
+        displayedRoadmapJson = ""
+        isTranslating = true
 
         val languageName = when (selectedLanguage) {
             LanguageSupport.ZULU -> "isiZulu"
@@ -121,45 +151,43 @@ fun RoadmapScreen(
             else -> "English"
         }
 
-        if (selectedLanguage == LanguageSupport.ENGLISH) {
-            displayedRoadmapJson = roadmapJson
-            isTranslating = false
-            return@LaunchedEffect
-        }
-
-        // Reuse a translation saved on this device if available.
-        val cachedTranslation = if (roadmapId.isNotBlank()) {
-            RoadmapTranslationCache.get(
-                context = context,
-                roadmapId = roadmapId,
-                language = selectedLanguage
-            )
-        } else {
-            null
-        }
-
-        if (cachedTranslation != null) {
-            displayedRoadmapJson = cachedTranslation
-            return@LaunchedEffect
-        }
-
-        // New roadmaps are generated in the selected language.
-        // For existing roadmaps, request translation if needed.
-        isTranslating = true
-
         try {
+            // First, check whether this translation is already saved.
+            val cachedTranslation = if (roadmapId.isNotBlank()) {
+                RoadmapTranslationCache.get(
+                    context = context,
+                    roadmapId = roadmapId,
+                    language = selectedLanguage
+                )
+            } else {
+                null
+            }
+
+            if (cachedTranslation != null) {
+                // Validate the cached JSON before displaying it.
+                Json {
+                    ignoreUnknownKeys = true
+                }.decodeFromString<GeneratedRoadmap>(cachedTranslation)
+
+                displayedRoadmapJson = cachedTranslation
+                return@LaunchedEffect
+            }
+
+            // Request a new translation.
             val translatedJson = GeminiService.translateRoadmap(
                 roadmapJson = roadmapJson,
                 targetLanguage = languageName
             )
 
-            // Verify that the returned JSON can be displayed.
+            // Validate the translated JSON.
             Json {
                 ignoreUnknownKeys = true
             }.decodeFromString<GeneratedRoadmap>(translatedJson)
 
+            // Display only after translation has succeeded.
             displayedRoadmapJson = translatedJson
 
+            // Save the translation for future visits.
             if (roadmapId.isNotBlank()) {
                 RoadmapTranslationCache.save(
                     context = context,
@@ -170,10 +198,10 @@ fun RoadmapScreen(
             }
 
         } catch (e: Exception) {
-            translationError = e.message
-                ?: "Unable to translate this roadmap."
+            displayedRoadmapJson = ""
 
-            displayedRoadmapJson = roadmapJson
+            translationError = e.message
+                ?: "Unable to translate this roadmap. Please try again."
 
         } finally {
             isTranslating = false
@@ -268,16 +296,6 @@ fun RoadmapScreen(
                 .verticalScroll(rememberScrollState())
         ) {
 
-            if (isTranslating) {
-                CircularProgressIndicator()
-            }
-
-            translationError?.let { error ->
-                Text(
-                    text = "Translation failed: $error",
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
 
             // TOP BAR
 
@@ -330,19 +348,97 @@ fun RoadmapScreen(
                     )
                 }
 
-                if (isTranslating) {
-                    CircularProgressIndicator()
-                }
-
-                translationError?.let { error ->
-                    Text(
-                        text = "Translation failed: $error",
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
             }
 
-            if (roadmap == null) {
+            if (isTranslating) {
+
+                // TRANSLATION LOADING STATE
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 80.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    CircularProgressIndicator(
+                        color = SkillLinkPurple,
+                        strokeWidth = 3.dp
+                    )
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    val languageName = when (selectedLanguage) {
+                        LanguageSupport.ZULU -> "isiZulu"
+                        LanguageSupport.AFRIKAANS -> "Afrikaans"
+                        else -> "English"
+                    }
+
+                    Text(
+                        text = "Preparing your roadmap in $languageName...",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Please wait while your learning plan is translated.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary
+                    )
+                }
+
+            } else if (translationError != null) {
+
+                // TRANSLATION ERROR STATE
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 60.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Image(
+                        painter = painterResource(
+                            id = R.drawable.skilllink_logo
+                        ),
+                        contentDescription = "SkillLink logo",
+                        modifier = Modifier.size(75.dp),
+                        contentScale = ContentScale.Fit
+                    )
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    Text(
+                        text = "Translation unavailable",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Text(
+                        text = translationError ?: "Please try again.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error
+                    )
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    OutlinedButton(
+                        onClick = {
+                            translationRetry++
+                        }
+                    ) {
+                        Text("Retry translation")
+                    }
+                }
+
+            } else if (roadmap == null) {
+
+                // EMPTY / INVALID STATE
 
                 // EMPTY / INVALID STATE
 

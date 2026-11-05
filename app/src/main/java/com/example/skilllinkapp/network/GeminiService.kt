@@ -1,6 +1,6 @@
-
 package com.example.skilllinkapp.network
 
+import android.util.Log
 import com.example.skilllinkapp.LanguageSupport
 import com.example.skilllinkapp.data.supabase
 import io.github.jan.supabase.functions.*
@@ -127,60 +127,87 @@ object GeminiService {
         }
 
         val prompt = """
-            You are a professional multilingual educational translator.
+        You are a professional multilingual educational translator.
 
-            YOUR TASK:
-            Translate the entire learning roadmap into $targetLanguage.
+        YOUR TASK:
+        Translate the entire learning roadmap into $targetLanguage.
 
-            LANGUAGE REQUIREMENT:
-            The output MUST be written in $targetLanguage.
+        LANGUAGE REQUIREMENT:
+        The output MUST be written in $targetLanguage.
 
-            Translate ALL learner-facing content, including:
-            - Roadmap title
-            - Roadmap summary
-            - Every week title
-            - Every week description
-            - Every lesson title and description, if present
+        Translate ALL learner-facing content, including:
+        - Roadmap title
+        - Roadmap summary
+        - Every week title
+        - Every week description
+        - Every lesson title and description, if present
 
-            IMPORTANT:
-            1. Do not leave ordinary English sentences untranslated.
-            2. Do not return the original English roadmap.
-            3. Do not summarize or shorten the content.
-            4. Preserve the original meaning and detail.
-            5. Keep technical terms, programming keywords and product
-               names in English where appropriate.
-            6. Keep JSON property names unchanged.
-            7. Preserve the exact number and order of weeks.
-            8. Preserve exactly three lessons per week.
-            9. Do not add or remove any content.
-            10. Return valid JSON only. No Markdown or explanations.
+        IMPORTANT:
+        1. Do not leave ordinary English sentences untranslated.
+        2. Do not return the original English roadmap.
+        3. Do not summarize or shorten the content.
+        4. Preserve the original meaning and detail.
+        5. Keep technical terms, programming keywords and product
+           names in English where appropriate.
+        6. Keep JSON property names unchanged.
+        7. Preserve the exact number and order of weeks.
+        8. Preserve exactly three lessons per week.
+        9. Do not add or remove any content.
+        10. Return valid JSON only. No Markdown or explanations.
 
-            REQUIRED JSON STRUCTURE:
+        REQUIRED JSON STRUCTURE:
+        {
+          "title": "Translated roadmap title",
+          "summary": "Translated roadmap summary",
+          "weeks": [
             {
-              "title": "Translated roadmap title",
-              "summary": "Translated roadmap summary",
-              "weeks": [
-                {
-                  "title": "Translated week title",
-                  "description": "Translated description",
-                  "lessons": [
-                    "Translated lesson 1",
-                    "Translated lesson 2",
-                    "Translated lesson 3"
-                  ]
-                }
+              "title": "Translated week title",
+              "description": "Translated description",
+              "lessons": [
+                "Translated lesson 1",
+                "Translated lesson 2",
+                "Translated lesson 3"
               ]
             }
+          ]
+        }
 
-            ORIGINAL ROADMAP:
-            $roadmapJson
-        """.trimIndent()
+        ORIGINAL ROADMAP:
+        $roadmapJson
+    """.trimIndent()
 
-        val translatedText = requestGeneratedText(prompt)
+        Log.d(
+            "RoadmapTranslation",
+            "Sending roadmap translation request. Target: $targetLanguage"
+        )
 
-        validateRoadmapJson(translatedText)
+        try {
+            val translatedText = requestGeneratedText(prompt)
 
-        return translatedText
+            Log.d(
+                "RoadmapTranslation",
+                "Gemini response received. Target: $targetLanguage, characters: ${translatedText.length}"
+            )
+
+            validateRoadmapJson(translatedText)
+
+            Log.d(
+                "RoadmapTranslation",
+                "Translation JSON validation successful. Target: $targetLanguage"
+            )
+
+            return translatedText
+
+        } catch (e: Exception) {
+
+            Log.e(
+                "RoadmapTranslation",
+                "Translation failed. Target: $targetLanguage. Error: ${e.message}",
+                e
+            )
+
+            throw e
+        }
     }
 
     /**
