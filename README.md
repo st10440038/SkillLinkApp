@@ -2,245 +2,249 @@
 
 ### Personalised Learning. Structured Progress. AI-Powered Roadmaps.
 
-SkillLink is a native Android application that uses **AI to generate personalised learning roadmaps** based on a user's learning goals, existing knowledge, experience level, available study time, and preferred learning pace.
+SkillLink is a native Android learning application developed using Kotlin and Jetpack Compose. It uses artificial intelligence to generate personalised learning roadmaps based on users' learning goals, existing knowledge, experience levels, available study time, and preferred learning pace.
 
-Users can generate, save, and follow learning roadmaps while tracking lesson completion and overall progress.
-
----
-
-##  Table of Contents
-
-* [Features](#-features)
-* [How It Works](#-how-it-works)
-* [Main Screens](#-main-screens)
-* [Technology Stack](#-technology-stack)
-* [Architecture](#-architecture)
-* [Project Structure](#-project-structure)
-* [Database](#-database)
-* [Authentication](#-authentication)
-* [AI Roadmap Generation](#-ai-roadmap-generation)
-* [Progress Tracking](#-progress-tracking)
-* [Installation](#-installation)
-* [Configuration](#-configuration)
-* [Running the Application](#-running-the-application)
-* [Git Workflow](#-git-workflow)
-* [Current Status](#-current-status)
-* [Future Improvements](#-future-improvements)
-* [Security](#-security)
-* [License](#-license)
+Users can generate, save, and follow structured learning roadmaps, complete individual lessons, and monitor their learning progress. The application also supports multilingual learning, offline access to saved roadmaps, and cloud-based data synchronisation.
 
 ---
 
-##  Features
+## Table of Contents
 
-*  User registration and login
-*  Email confirmation
-*  Personal user profiles
-*  Profile editing
-*  AI-powered learning roadmap generation
-*  Personalised learning plans
-*  Roadmap storage
-*  Lesson completion tracking
-*  Learning progress tracking
-*  My Learning dashboard
-*  Roadmap filtering
-*  Roadmap deletion
-*  Last-accessed tracking
-*  Settings and account management
-*  Supabase cloud database
-*  Row Level Security
+- [Features](#features)
+- [How It Works](#how-it-works)
+- [Main Screens](#main-screens)
+- [Technology Stack](#technology-stack)
+- [Application Architecture](#application-architecture)
+- [Database and Storage](#database-and-storage)
+- [Authentication](#authentication)
+- [AI Roadmap Generation](#ai-roadmap-generation)
+- [Multilingual Support](#multilingual-support)
+- [Offline Functionality](#offline-functionality)
+- [Progress Tracking](#progress-tracking)
+- [Notifications](#notifications)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Running the Application](#running-the-application)
+- [Project Structure](#project-structure)
+- [Video Demonstration](#video-demonstration)
+- [Screenshots](#screenshots)
+- [Release Notes](#release-notes)
+- [Preparation for Publication](#preparation-for-publication)
+- [Security](#security)
+- [Future Improvements](#future-improvements)
+- [License](#license)
 
 ---
 
-##  How It Works
+## Features
 
-Users provide information about what they want to learn and how they prefer to learn it.
+### User Authentication and Profiles
+- User registration and login.
+- Email and password authentication.
+- Email confirmation.
+- Google Sign-In.
+- Password reset functionality.
+- Personal user profiles.
+- Profile management and account settings.
+
+### AI-Powered Learning
+- Personalised AI-generated learning roadmaps.
+- Learning plans based on individual goals and experience.
+- Structured weekly learning schedules.
+- Roadmap saving and retrieval.
+- Multilingual roadmap translations.
+
+### Learning Management
+- My Learning dashboard.
+- Saved roadmap management.
+- Individual lesson completion.
+- Overall learning progress tracking.
+- Roadmap filtering and deletion.
+- Offline access to saved roadmaps and progress.
+
+### Additional Functionality
+- English, isiZulu and Afrikaans language support.
+- Local storage using Room and SQLite.
+- Cloud database integration with Supabase.
+- Firebase Cloud Messaging for push notifications.
+- Notification preferences.
+- Progress synchronisation when an internet connection becomes available.
+
+---
+
+## How It Works
+
+Users provide information about what they want to learn and their learning preferences.
+
+The application sends the relevant learning information to the AI service, which generates a structured roadmap.
 
 ```text
-Learning Information
-        │
-        ▼
-   Gemini AI
-        │
-        ▼
-Personalised Roadmap
-        │
-        ▼
-    Supabase
-        │
-        ▼
-Lessons & Progress
+       Learning Information
+                |
+                v
+            Gemini AI
+                |
+                v
+       Personalised Roadmap
+                |
+                v
+        Save to Supabase
+                |
+                v
+       Local Room Database
+                |
+                v
+       Lessons and Progress
 ```
 
-The roadmap is generated using:
+The generated roadmap takes into consideration:
 
-* **Target skill**
-* **Experience level**
-* **Existing skills**
-* **Learning goal**
-* **Weekly study time**
-* **Learning pace**
+- Target skill.
+- Experience level.
+- Existing knowledge and skills.
+- Learning objectives.
+- Available weekly study time.
+- Preferred learning pace.
 
-Users can then save the roadmap, complete individual lessons, and monitor their progress.
-
----
-
-##  Main Screens
-
-### Authentication
-
-* Register
-* Login
-
-### Main Application
-
-* Home
-* Generate Roadmap
-* Roadmap Details
-* My Learning
-* Profile
-* Edit Profile
-* Settings
+Users can then save the roadmap, access it through My Learning, complete lessons and monitor their progress.
 
 ---
 
-##  Technology Stack
+## Main Screens
 
-| Technology             | Purpose                         |
-| ---------------------- | ------------------------------- |
-| **Kotlin**             | Primary programming language    |
-| **Jetpack Compose**    | User interface                  |
-| **Material 3**         | UI components and theming       |
-| **Android SDK**        | Android application development |
-| **Supabase Auth**      | User authentication             |
-| **PostgreSQL**         | Cloud database                  |
-| **Supabase PostgREST** | REST API                        |
-| **Gemini API**         | AI roadmap generation           |
-| **Ktor Client**        | Network communication           |
-| **Git**                | Version control                 |
-| **GitHub**             | Source code management          |
+The application includes the following screens:
+
+| Screen | Description |
+|---|---|
+| Register | Creates a new user account. |
+| Login | Allows users to authenticate. |
+| Home | Provides access to the main application features. |
+| Generate Roadmap | Collects learning preferences and generates a personalised roadmap. |
+| Roadmap Details | Displays the generated roadmap and its lessons. |
+| My Learning | Displays saved roadmaps and learning progress. |
+| Profile | Displays personal user information. |
+| Edit Profile | Allows users to update their profile. |
+| Settings | Provides language, notification and account preferences. |
+| Notifications | Provides access to notification features where available in the application. |
 
 ---
 
-##  Architecture
+## Technology Stack
 
-SkillLink uses a simple layered architecture that separates the user interface, data operations, and external services.
+| Technology | Purpose |
+|---|---|
+| Kotlin | Primary programming language |
+| Jetpack Compose | Native Android user interface |
+| Material 3 | UI components and theming |
+| Android SDK | Android application development |
+| Supabase Auth | User authentication |
+| Supabase PostgreSQL | Cloud database |
+| Supabase PostgREST | Database communication |
+| Supabase Edge Functions | Secure backend operations |
+| Gemini API | AI roadmap generation and translation |
+| Ktor Client | Network communication |
+| Room / SQLite | Local database and offline storage |
+| Firebase Cloud Messaging | Push notifications |
+| Gradle | Project build and dependency management |
+| Git | Version control |
+| GitHub | Source code hosting |
+
+---
+
+## Application Architecture
+
+SkillLink uses a layered application structure that separates the user interface, data management, local storage and external services.
 
 ```text
-┌──────────────────────────────────┐
-│          Android App             │
-│                                  │
-│     Kotlin + Jetpack Compose     │
-│                                  │
-│  ┌────────────┐ ┌─────────────┐ │
-│  │  Screens   │ │ Navigation  │ │
-│  └─────┬──────┘ └─────────────┘ │
-│        │                         │
-│        ▼                         │
-│  ┌────────────────────────────┐ │
-│  │        Data Layer          │ │
-│  │                            │ │
-│  │ Supabase + Repositories    │ │
-│  └──────────────┬─────────────┘ │
-└─────────────────┼────────────────┘
-                  │
-          ┌───────┴────────┐
-          ▼                ▼
-   ┌─────────────┐   ┌─────────────┐
-   │  Supabase   │   │  Gemini API │
-   │   Backend   │   │  AI Service │
-   └─────────────┘   └─────────────┘
++--------------------------------------+
+|             SkillLink                |
+|                                      |
+|       Kotlin + Jetpack Compose       |
+|                                      |
+|  +-------------+  +---------------+ |
+|  |   Screens   |  |  Navigation   | |
+|  +------+------+  +---------------+ |
+|         |                            |
+|         v                            |
+|  +--------------------------------+  |
+|  |           Data Layer           |  |
+|  |                                |  |
+|  | Repositories and Services      |  |
+|  +---------------+----------------+  |
+|                  |                   |
+|        +---------+---------+         |
+|        |                   |         |
+|        v                   v         |
+|  +-------------+   +---------------+ |
+|  | Room / SQLite|  |   Supabase    | |
+|  | Local Storage|  | Cloud Backend | |
+|  +-------------+   +---------------+ |
+|                            |         |
+|                  +---------+-------+ |
+|                  |                 | |
+|                  v                 v |
+|             Gemini AI          Firebase|
+|                              Messaging |
++--------------------------------------+
 ```
+
+The local database supports offline access, while Supabase provides cloud storage and synchronisation. AI-related operations are handled through the backend service.
 
 ---
 
-##  Project Structure
+## Database and Storage
 
-```text
-com.example.skilllinkapp
-│
-├── MainActivity.kt
-│
-├── data
-│   ├── SupabaseClient.kt
-│   ├── SkillRepository.kt
-│   └── ProgressRepository.kt
-│
-├── network
-│   └── GeminiService.kt
-│
-├── screens
-│   ├── RegisterScreen.kt
-│   ├── LoginScreen.kt
-│   ├── HomeScreen.kt
-│   ├── GenerateRoadmapScreen.kt
-│   ├── RoadmapScreen.kt
-│   ├── MyLearningScreen.kt
-│   ├── ProfileScreen.kt
-│   ├── EditProfileScreen.kt
-│   └── SettingsScreen.kt
-│
-└── ui
-    └── theme
-        ├── Color.kt
-        ├── Theme.kt
-        └── Type.kt
-```
+SkillLink uses Supabase PostgreSQL for cloud data storage and Room, built on SQLite, for local data persistence.
+
+### Supabase
+
+The cloud database stores application information, including:
+
+| Table | Purpose |
+|---|---|
+| `profiles` | Stores user profile information. |
+| `categories` | Organises available skill categories. |
+| `skills` | Stores available skills. |
+| `user_skills` | Associates users with their skills. |
+| `roadmaps` | Stores generated learning roadmaps. |
+| `progress` | Stores lesson completion and progress information. |
+
+Additional tables support application functionality where configured.
+
+Supabase Row Level Security (RLS) policies help protect user-specific information.
+
+### Room / SQLite
+
+The local database provides:
+- Local storage of saved roadmaps.
+- Offline access to previously saved roadmaps.
+- Local lesson progress storage.
+- Progress updates without an internet connection.
+- Synchronisation of pending progress when connectivity returns.
 
 ---
 
-##  Database
+## Authentication
 
-SkillLink uses **Supabase PostgreSQL** to store application data.
+Authentication is implemented using Supabase Auth.
 
-### Main Tables
+Available authentication functionality includes:
 
-```text
-profiles
-categories
-skills
-user_skills
-roadmaps
-progress
-```
-
-| Table         | Purpose                               |
-| ------------- | ------------------------------------- |
-| `profiles`    | Stores user profile information       |
-| `categories`  | Organises available skills            |
-| `skills`      | Stores available skills               |
-| `user_skills` | Associates users with their skills    |
-| `roadmaps`    | Stores generated learning roadmaps    |
-| `progress`    | Stores lesson completion and progress |
-
-Supabase **Row Level Security (RLS)** is used to protect user-specific data.
-
----
-
-##  Authentication
-
-Authentication is handled using **Supabase Auth**.
-
-```text
-Register
-   │
-   ▼
-Email Confirmation
-   │
-   ▼
-Login
-   │
-   ▼
-Authenticated Application
-```
+- Email and password registration.
+- Email and password login.
+- Email confirmation.
+- Password reset.
+- Google Sign-In.
 
 A PostgreSQL trigger automatically creates a corresponding profile when a new authentication user is registered.
 
+Authenticated users can access their personal learning information and saved roadmaps.
+
 ---
 
-##  AI Roadmap Generation
+## AI Roadmap Generation
 
-The **Gemini API** is used to generate personalised learning roadmaps.
+SkillLink integrates Google's Gemini AI through a backend service to generate personalised learning roadmaps.
 
 ### Example Input
 
@@ -253,240 +257,301 @@ Weekly Time: 5–7 hours
 Learning Pace: Moderate
 ```
 
-### Generated Roadmap
+### Generated Roadmap Structure
 
 ```text
 Roadmap
-│
-├── Title
-├── Summary
-│
-├── Week 1
-│   ├── Lesson 1
-│   ├── Lesson 2
-│   └── Lesson 3
-│
-├── Week 2
-│   ├── Lesson 1
-│   ├── Lesson 2
-│   └── Lesson 3
-│
-└── Additional Weeks
+|
++-- Title
+|
++-- Summary
+|
++-- Week 1
+|   +-- Lesson 1
+|   +-- Lesson 2
+|   +-- Lesson 3
+|
++-- Week 2
+|   +-- Lesson 1
+|   +-- Lesson 2
+|   +-- Lesson 3
+|
++-- Additional Weeks
 ```
 
-The generated roadmap is stored in Supabase and can be accessed through **My Learning**.
+Generated roadmaps are saved to Supabase and can be accessed through the My Learning screen.
 
 ---
 
-##  Progress Tracking
+## Multilingual Support
+
+SkillLink supports three application languages:
+
+- English.
+- isiZulu.
+- Afrikaans.
+
+Users can change their preferred language through the application's language settings.
+
+The application also supports translating saved learning roadmaps into isiZulu and Afrikaans using Gemini AI.
+
+Translation caching helps avoid repeatedly requesting translations that have already been generated and saved locally.
+
+This improves loading efficiency and reduces unnecessary network requests.
+
+---
+
+## Offline Functionality
+
+SkillLink uses Room and SQLite to support offline learning.
+
+Previously saved roadmaps remain accessible without an internet connection.
+
+Users can:
+- View locally saved roadmaps.
+- Access roadmap lessons.
+- Update lesson completion.
+- View locally stored progress.
+
+When an internet connection becomes available, pending progress changes can be synchronised with Supabase.
+
+An internet connection is still required for operations that depend on online services, such as generating new AI roadmaps.
+
+---
+
+## Progress Tracking
 
 Users can mark individual lessons as completed.
 
 Example:
 
 ```text
-☑ Variables and Data Types
-☑ Functions
-☐ Object-Oriented Programming
+Completed:
+[✓] Variables and Data Types
+[✓] Functions
+[✓] Introduction to Databases
+
+Not Completed:
+[ ] Object-Oriented Programming
 ```
 
-Progress is stored in Supabase and remains available when the roadmap is reopened.
+The application calculates learning progress based on completed lessons.
 
 Example:
 
 ```text
 6 / 12 lessons completed
-50% progress
+
+50% Progress
 ```
+
+Progress is stored locally and synchronised with Supabase when connectivity is available.
 
 ---
 
-##  Installation
+## Notifications
+
+SkillLink integrates Firebase Cloud Messaging (FCM) to support push notifications.
+
+The notification functionality includes:
+- Firebase Cloud Messaging integration.
+- Device registration using FCM tokens.
+- Notification permission handling.
+- Notification preference management.
+- Enabling and disabling notifications.
+- Support for receiving push notifications on Android devices.
+
+Notification delivery depends on device permissions, network connectivity and Firebase configuration.
+
+---
+
+## Installation
 
 ### Requirements
 
 Before running SkillLink, make sure you have:
 
-* Android Studio
-* Android SDK
-* Compatible JDK
-* Android emulator or physical Android device
-* Internet connection
-* Supabase project
-* Gemini API access
-* Git
+- Android Studio.
+- Android SDK.
+- A compatible JDK.
+- An Android emulator or physical Android device.
+- An internet connection.
+- A configured Supabase project.
+- Firebase project configuration.
+- Gemini API access through the configured backend.
+- Git.
 
 ### Clone the Repository
 
 ```bash
 git clone https://github.com/st10440038/SkillLinkApp.git
+
 cd SkillLinkApp
 ```
 
-Open the project in **Android Studio** and allow Gradle to synchronise.
+Open the project in Android Studio and allow Gradle to synchronise.
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
 ### Supabase
 
-Create a Supabase project and configure:
+Create and configure a Supabase project with:
 
-* Authentication
-* PostgreSQL database
-* Required tables
-* Row Level Security policies
-* Profile creation trigger
-
-The main tables are:
-
-```text
-profiles
-categories
-skills
-user_skills
-roadmaps
-progress
-```
+- Authentication.
+- PostgreSQL database.
+- Required database tables.
+- Row Level Security policies.
+- Profile creation trigger.
+- Required Edge Functions.
 
 Configure the Supabase project URL and publishable key locally.
 
-### Gemini API
+### Firebase
 
-A valid Gemini API key is required for AI roadmap generation.
+Configure Firebase for the Android application.
 
->  **Important:** Do not commit API keys or other sensitive credentials to GitHub.
+The project requires the appropriate Firebase configuration file and Cloud Messaging setup.
 
-For production use, the Gemini API should ideally be accessed through a secure backend rather than directly from the Android application.
+### Gemini AI
 
----
+Configure Gemini API access through the Supabase backend service.
 
-##  Running the Application
+A valid API key and correctly configured backend function are required for AI roadmap generation and translation.
 
-1. Open the project in **Android Studio**.
-2. Synchronise Gradle.
-3. Connect an Android device or start an emulator.
-4. Select the `app` configuration.
-5. Click **Run**.
-6. Register a new account or log in.
-7. Open the **Home** screen.
-8. Generate a learning roadmap.
+**Important:** Never commit private API keys, service-role keys, passwords, signing credentials or other sensitive information to GitHub.
 
 ---
 
-## 🌿 Git Workflow
+## Running the Application
 
-Git and GitHub are used for version control.
+1. Clone the GitHub repository.
+2. Open the project in Android Studio.
+3. Allow Gradle to synchronise.
+4. Configure the required Supabase and Firebase services.
+5. Connect an Android device or start an emulator.
+6. Select the `app` run configuration.
+7. Click **Run**.
+8. Register a new account or log in.
+9. Start generating personalised learning roadmaps.
 
-### Example Feature Branches
+---
+
+## Project Structure
+
+The application is organised into packages that separate the user interface, data operations, networking, local storage and supporting functionality.
 
 ```text
-feature/authentication
-feature/roadmap-generation
-feature/progress-tracking
-feature/profile
-feature/ui
+com.example.skilllinkapp
+|
++-- data/
+|   +-- Supabase configuration
+|   +-- Repositories
+|   +-- Room database
+|   +-- Local caching
+|
++-- network/
+|   +-- Gemini service
+|
++-- screens/
+|   +-- Authentication screens
+|   +-- Home screen
+|   +-- Roadmap screens
+|   +-- My Learning screen
+|   +-- Profile screens
+|   +-- Settings screen
+|
++-- notifications/
+|   +-- Notification services
+|   +-- FCM integration
+|
++-- ui/
+|   +-- Components
+|   +-- Theme
+|
++-- MainActivity.kt
 ```
 
-### Basic Git Commands
-
-```bash
-git status
-git add .
-git commit -m "Update SkillLink UI"
-git push
-```
-
-Recommended workflow:
-
-```text
-Create Feature
-      ↓
-Implement
-      ↓
-Build & Test
-      ↓
-Fix Errors
-      ↓
-Commit
-      ↓
-Push to GitHub
-```
+The structure above illustrates the main functional areas. Refer to the repository for the complete implementation and actual source files.
 
 ---
 
-##  Current Status
+## Video Demonstration
 
-###  Completed
+The video presentation demonstrates SkillLink's main functionality, including authentication, AI roadmap generation, multilingual support, offline functionality, progress tracking, notifications and application settings.
 
-* Android project setup
-* Kotlin and Jetpack Compose
-* Material 3 theme
-* Supabase integration
-* User authentication
-* Email confirmation
-* Automatic profile creation
-* Profile management
-* Settings
-* AI roadmap generation
-* Gemini API integration
-* Roadmap storage
-* Roadmap details
-* Lesson progress tracking
-* My Learning
-* Roadmap filtering
-* Roadmap deletion
-* Main navigation
-* UI refinement
-
-###  Current Focus
-
-The current development focus is improving the visual consistency and overall UI quality of the application.
-
-This includes:
-
-* Typography
-* Spacing
-* Buttons
-* Cards
-* Icons
-* Navigation
-* Progress indicators
-* Authentication screens
-* Profile screens
-* Settings screens
+**Video presentation:** [Insert your YouTube or Google Drive video link here]
 
 ---
 
-## Future Improvements
+## Release Notes
 
-Potential future features include:
+The final release includes improvements and additional functionality introduced after the initial prototype.
 
-*  Google SSO
-*  Offline support with Room
-*  Push notifications
-*  Multilingual support
-*  Profile image uploads
-*  More adaptive AI-generated roadmaps
+The release notes document:
+- Improvements to the application's original functionality.
+- New authentication and account features.
+- AI roadmap generation improvements.
+- Multilingual support.
+- Offline storage and progress synchronisation.
+- Notification functionality.
+- Additional user-defined features.
+
+See [RELEASE_NOTES.md](RELEASE_NOTES.md) for the complete list of updates and the distinction between required and innovative features.
+
+---
+
+## Preparation for Publication
+
+A signed release APK has been generated for SkillLink.
+
+The release APK is intended for installation and testing on compatible Android devices.
+
+**APK:** [Add the signed APK to a GitHub Release and insert its link here.]
+
+Publication evidence should include:
+- Signed APK.
+- Screenshots of the application running.
+- Evidence of successful signed APK generation.
+- Google Play Console upload evidence, if applicable.
+
+The generation of a signed APK does not mean that the application has been published on the Google Play Store.
 
 ---
 
 ## Security
 
-SkillLink uses:
+SkillLink uses several security mechanisms:
 
-* **Supabase Authentication** for account management
-* **Row Level Security (RLS)** for user data protection
-* **HTTPS** for network communication
+- Supabase Authentication for account management.
+- Row Level Security (RLS) for user-specific database access.
+- HTTPS for network communication.
+- Secure backend handling of AI-related requests.
+- Local storage for offline functionality.
 
-Sensitive credentials such as API keys should never be committed to the repository.
+Sensitive credentials must not be committed to the public GitHub repository.
+
+The release signing keystore and its passwords must be stored securely and kept separate from the source code.
+
+---
+
+## Future Improvements
+
+Potential future improvements include:
+
+- More adaptive AI-generated learning recommendations.
+- Additional languages.
+- Expanded learning resources.
+- Enhanced analytics and progress visualisations.
+- Further notification personalisation.
+- Additional accessibility improvements.
 
 ---
 
 ## License
 
-This project was developed as an **academic software development project**.
+This project was developed as an academic software development project.
 
 ---
 
@@ -495,5 +560,7 @@ This project was developed as an **academic software development project**.
 ### SkillLink
 
 **Personalised Learning. Structured Progress. AI-Powered Roadmaps.**
+
+Developed using Kotlin, Jetpack Compose, Supabase, Firebase and Gemini AI.
 
 </div>
