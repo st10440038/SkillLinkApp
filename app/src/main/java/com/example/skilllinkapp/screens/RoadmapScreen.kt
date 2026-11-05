@@ -814,7 +814,8 @@ fun RoadmapScreen(
                                                     // Notifications only when a lesson becomes completed.
                                                     progressRecords = refreshedProgress
 
-// Show an in-app popup only after a lesson is successfully saved.
+                                                    // Show an in-app popup only after a lesson is successfully saved.
+
                                                     if (checked && !wasCompleted) {
 
                                                         // Count completed lessons.
@@ -822,8 +823,7 @@ fun RoadmapScreen(
                                                             roadmapData.weeks
                                                                 .flatMapIndexed { weekIndex, roadmapWeek ->
                                                                     roadmapWeek.lessons.mapIndexed { lessonIndex, _ ->
-                                                                        val order =
-                                                                            (weekIndex * 3) + lessonIndex + 1
+                                                                        val order = (weekIndex * 3) + lessonIndex + 1
 
                                                                         refreshedProgress.any {
                                                                             it.step_order == order && it.is_completed
@@ -833,6 +833,7 @@ fun RoadmapScreen(
                                                                 .count { it }
 
                                                         if (totalLessons > 0) {
+
                                                             val previousPercentage =
                                                                 previousCompletedCount * 100 / totalLessons
 
@@ -848,31 +849,17 @@ fun RoadmapScreen(
                                                                 val message =
                                                                     "Congratulations! You've completed your learning roadmap."
 
-                                                                // Save the notification in Supabase.
-                                                                NotificationRepository.createNotification(
-                                                                    userId = user.id,
-                                                                    title = title,
-                                                                    message = message,
-                                                                    notificationType = "roadmap_completed"
-                                                                )
-
-// Show the in-app popup.
-                                                                NotificationEventBus.publish(
-                                                                    title = title,
-                                                                    message = message
-                                                                )
-
-// Keep the existing notification dispatcher.
                                                                 SkillLinkNotificationDispatcher.send(
                                                                     context = context,
                                                                     userId = user.id,
                                                                     title = title,
                                                                     message = message,
-                                                                    notificationType = "roadmap_completed_$roadmapId",
+                                                                    notificationType = "roadmap_completed",
                                                                     preventDuplicates = true
                                                                 )
 
                                                             } else {
+
                                                                 // 25%, 50% and 75% milestones.
                                                                 val milestones = listOf(
                                                                     25 to "You're making great progress!",
@@ -881,6 +868,7 @@ fun RoadmapScreen(
                                                                 )
 
                                                                 milestones.forEach { (milestone, title) ->
+
                                                                     if (
                                                                         previousPercentage < milestone &&
                                                                         newPercentage >= milestone
@@ -888,24 +876,12 @@ fun RoadmapScreen(
                                                                         val message =
                                                                             "You've reached $milestone% of your learning roadmap. Keep going!"
 
-                                                                        NotificationRepository.createNotification(
-                                                                            userId = user.id,
-                                                                            title = title,
-                                                                            message = message,
-                                                                            notificationType = "milestone_${roadmapId}_$milestone"
-                                                                        )
-
-                                                                        NotificationEventBus.publish(
-                                                                            title = title,
-                                                                            message = message
-                                                                        )
-
                                                                         SkillLinkNotificationDispatcher.send(
                                                                             context = context,
                                                                             userId = user.id,
                                                                             title = title,
                                                                             message = message,
-                                                                            notificationType = "milestone_${roadmapId}_$milestone",
+                                                                            notificationType = "milestone_$milestone",
                                                                             preventDuplicates = true
                                                                         )
                                                                     }
@@ -913,6 +889,7 @@ fun RoadmapScreen(
                                                             }
                                                         }
                                                     }
+
                                                 }
                                             } catch (e: Exception) {
                                                 errorMessage = e.message
