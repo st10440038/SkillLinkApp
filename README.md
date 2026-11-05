@@ -27,7 +27,6 @@ Users can generate, save, and follow structured learning roadmaps, complete indi
 - [Running the Application](#running-the-application)
 - [Project Structure](#project-structure)
 - [Video Demonstration](#video-demonstration)
-- [Screenshots](#screenshots)
 - [Release Notes](#release-notes)
 - [Preparation for Publication](#preparation-for-publication)
 - [Security](#security)
