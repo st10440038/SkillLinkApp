@@ -76,6 +76,8 @@ private fun settingsText(english: String): String {
             "Notifications" -> "Kennisgewings"
             "Manage learning alerts" -> "Bestuur leerkennisgewings"
             "Dark mode" -> "Donker modus"
+            "On" -> "Aan"
+            "Off" -> "Af"
             "Coming soon" -> "Kom binnekort"
             "SUPPORT" -> "ONDERSTEUNING"
             "Help & support" -> "Hulp en ondersteuning"
@@ -128,6 +130,8 @@ private fun settingsText(english: String): String {
             "Notifications" -> "Izaziso"
             "Manage learning alerts" -> "Phatha izaziso zokufunda"
             "Dark mode" -> "Imodi emnyama"
+            "On" -> "Vuliwe"
+            "Off" -> "Valiwe"
             "Coming soon" -> "Iyeza maduze"
             "SUPPORT" -> "USIZO"
             "Help & support" -> "Usizo nokwesekwa"
@@ -173,6 +177,8 @@ private fun settingsText(english: String): String {
 fun SettingsScreen(
     onBack: () -> Unit,
     onLogout: () -> Unit,
+    isDarkMode: Boolean,
+    onDarkModeChange: (Boolean) -> Unit,
     onEditProfile: () -> Unit = {}
 ) {
     val scope = rememberCoroutineScope()
@@ -286,7 +292,7 @@ fun SettingsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(SkillLinkBackground)
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 22.dp, vertical = 24.dp)
     ) {
@@ -299,12 +305,12 @@ fun SettingsScreen(
                     .size(42.dp)
                     .clickable { onBack() },
                 shape = RoundedCornerShape(13.dp),
-                color = Color.White
+                color = MaterialTheme.colorScheme.surface
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
                         text = "‹",
-                        color = SkillLinkNavy,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 30.sp,
                         fontWeight = FontWeight.Light
                     )
@@ -317,13 +323,13 @@ fun SettingsScreen(
                 Text(
                     text = settingsText("Settings"),
                     style = MaterialTheme.typography.headlineSmall,
-                    color = SkillLinkNavy,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = settingsText("Manage your SkillLink experience"),
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF85849A)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -439,7 +445,7 @@ fun SettingsScreen(
                     modifier = Modifier
                         .size(44.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(SkillLinkLightPurple),
+                        .background(MaterialTheme.colorScheme.primaryContainer),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -455,7 +461,7 @@ fun SettingsScreen(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = settingsText("Notifications"),
-                        color = SkillLinkNavy,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -464,7 +470,7 @@ fun SettingsScreen(
 
                     Text(
                         text = settingsText("Manage learning alerts"),
-                        color = Color(0xFF85849A),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp
                     )
                 }
@@ -479,12 +485,49 @@ fun SettingsScreen(
 
             SettingsDivider()
 
-            SettingsItem(
-                icon = "◐",
-                title = settingsText("Dark mode"),
-                subtitle = settingsText("Coming soon"),
-                onClick = { /* Future feature */ }
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "◐",
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                Spacer(modifier = Modifier.size(14.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = settingsText("Dark mode"),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.height(3.dp))
+                    Text(
+                        text = if (isDarkMode) settingsText("On") else settingsText("Off"),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp
+                    )
+                }
+
+                Switch(
+                    checked = isDarkMode,
+                    onCheckedChange = onDarkModeChange
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(28.dp))
@@ -564,7 +607,7 @@ fun SettingsScreen(
         ) {
             Text(
                 text = "SkillLink",
-                color = Color(0xFFAAA7B8),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium
             )
@@ -597,7 +640,7 @@ fun SettingsScreen(
                 Text(
                     text = settingsText("Change password"),
                     fontWeight = FontWeight.Bold,
-                    color = SkillLinkNavy
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             },
             text = {
@@ -606,7 +649,7 @@ fun SettingsScreen(
                         text = settingsText(
                             "We'll send a secure password reset link to:"
                         ),
-                        color = Color(0xFF85849A),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 14.sp
                     )
 
@@ -615,14 +658,14 @@ fun SettingsScreen(
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
-                        color = SkillLinkLightPurple
+                        color = MaterialTheme.colorScheme.primaryContainer
                     ) {
                         Text(
                             text = currentEmail.ifBlank {
                                 settingsText("Your registered email")
                             },
                             modifier = Modifier.padding(12.dp),
-                            color = SkillLinkNavy,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -685,7 +728,7 @@ fun SettingsScreen(
                     if (passwordLoading) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(18.dp),
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.surface,
                             strokeWidth = 2.dp
                         )
                     } else {
@@ -715,7 +758,7 @@ fun SettingsScreen(
             title = {
                 Text(
                     text = settingsText("Help & support"),
-                    color = SkillLinkNavy,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold
                 )
             },
@@ -776,7 +819,7 @@ fun SettingsScreen(
                 Text(
                     text = settingsText("Language"),
                     fontWeight = FontWeight.Bold,
-                    color = SkillLinkNavy
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             },
             text = {
@@ -829,14 +872,14 @@ private fun HelpItem(
     Column {
         Text(
             text = question,
-            color = SkillLinkNavy,
+            color = MaterialTheme.colorScheme.onSurface,
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold
         )
         Spacer(modifier = Modifier.height(3.dp))
         Text(
             text = answer,
-            color = Color(0xFF85849A),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 12.sp,
             lineHeight = 17.sp
         )
@@ -850,7 +893,7 @@ private fun SettingsGroup(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        color = Color.White
+        color = MaterialTheme.colorScheme.surface
     ) {
         Column(
             modifier = Modifier.padding(
@@ -868,7 +911,7 @@ private fun SettingsSectionTitle(
 ) {
     Text(
         text = text,
-        color = Color(0xFF85849A),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         fontSize = 11.sp,
         fontWeight = FontWeight.Bold,
         letterSpacing = 1.5.sp
@@ -893,7 +936,7 @@ private fun SettingsItem(
             modifier = Modifier
                 .size(44.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(SkillLinkLightPurple),
+                .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -909,21 +952,21 @@ private fun SettingsItem(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                color = SkillLinkNavy,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(modifier = Modifier.height(3.dp))
             Text(
                 text = subtitle,
-                color = Color(0xFF85849A),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp
             )
         }
 
         Text(
             text = "›",
-            color = Color(0xFFAAA7B8),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 23.sp
         )
     }

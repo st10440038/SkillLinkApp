@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -179,7 +180,7 @@ fun ProfileScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(SkillLinkBackground)
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
             .padding(
                 horizontal = 20.dp,
@@ -192,7 +193,7 @@ fun ProfileScreen(
             modifier = Modifier
                 .size(112.dp)
                 .clip(CircleShape)
-                .background(SkillLinkLightPurple),
+                .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center
         ) {
             Box(
@@ -220,7 +221,7 @@ fun ProfileScreen(
             text = fullName,
             fontSize = 25.sp,
             fontWeight = FontWeight.Bold,
-            color = SkillLinkNavy
+            color = MaterialTheme.colorScheme.onSurface
         )
 
         Spacer(modifier = Modifier.height(5.dp))
@@ -229,7 +230,7 @@ fun ProfileScreen(
         Text(
             text = email,
             fontSize = 14.sp,
-            color = Color(0xFF85849A)
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         Spacer(modifier = Modifier.height(26.dp))
@@ -241,7 +242,7 @@ fun ProfileScreen(
                     text = profileScreenText("About me"),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = SkillLinkNavy
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
                 Spacer(modifier = Modifier.height(9.dp))
@@ -250,7 +251,7 @@ fun ProfileScreen(
                     text = biography,
                     fontSize = 14.sp,
                     lineHeight = 21.sp,
-                    color = Color(0xFF656376)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -268,7 +269,7 @@ fun ProfileScreen(
                         modifier = Modifier
                             .size(42.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(SkillLinkLightPurple),
+                            .background(MaterialTheme.colorScheme.primaryContainer),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -285,7 +286,7 @@ fun ProfileScreen(
                         Text(
                             text = profileScreenText("Location"),
                             fontSize = 12.sp,
-                            color = Color(0xFF85849A)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
                         Spacer(modifier = Modifier.height(3.dp))
@@ -294,7 +295,7 @@ fun ProfileScreen(
                             text = location,
                             fontSize = 15.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = SkillLinkNavy
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -367,7 +368,7 @@ private fun ProfileSectionCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 0.dp
@@ -391,7 +392,7 @@ private fun ProfileStatCard(
         modifier = modifier,
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 0.dp
@@ -418,7 +419,7 @@ private fun ProfileStatCard(
             Text(
                 text = title,
                 fontSize = 11.sp,
-                color = Color(0xFF85849A)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

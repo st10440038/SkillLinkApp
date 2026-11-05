@@ -35,12 +35,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.skilllinkapp.LanguageSupport
 import com.example.skilllinkapp.SkillLinkApplication
 import com.example.skilllinkapp.data.ProgressRepository
+import com.example.skilllinkapp.data.ProgressRecord
 import com.example.skilllinkapp.data.local.CachedRoadmapEntity
 import com.example.skilllinkapp.data.supabase
 import com.example.skilllinkapp.localizedText
@@ -59,6 +61,11 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.TextStyle
+import java.util.Locale
 
 @Composable
 fun HomeScreen(
@@ -82,6 +89,10 @@ fun HomeScreen(
 
     var totalLessons by remember {
         mutableStateOf(0)
+    }
+
+    var weeklyActivity by remember {
+        mutableStateOf(List(7) { 0 })
     }
 
     var loadError by remember {
@@ -132,6 +143,7 @@ fun HomeScreen(
                 )
 
                 completedLessons = progress.count { it.is_completed }
+                weeklyActivity = buildWeeklyActivity(progress)
                 isLoading = false
                 return@LaunchedEffect
             }
@@ -211,13 +223,16 @@ fun HomeScreen(
 
                 totalLessons = countLessons(roadmapObject)
 
-                completedLessons = if (currentRoadmapId.isNotBlank()) {
-                    ProgressRepository.getProgress(
+                if (currentRoadmapId.isNotBlank()) {
+                    val progress = ProgressRepository.getProgress(
                         roadmapId = currentRoadmapId,
                         userId = user.id
-                    ).count { it.is_completed }
+                    )
+                    completedLessons = progress.count { it.is_completed }
+                    weeklyActivity = buildWeeklyActivity(progress)
                 } else {
-                    0
+                    completedLessons = 0
+                    weeklyActivity = List(7) { 0 }
                 }
             }
         } catch (_: Exception) {
@@ -253,10 +268,12 @@ fun HomeScreen(
                     roadmapTitle = latestCached.title
                     totalLessons = countLessons(roadmapObject)
 
-                    completedLessons = ProgressRepository.getProgress(
+                    val progress = ProgressRepository.getProgress(
                         roadmapId = currentRoadmapId,
                         userId = user.id
-                    ).count { it.is_completed }
+                    )
+                    completedLessons = progress.count { it.is_completed }
+                    weeklyActivity = buildWeeklyActivity(progress)
                 }
             } catch (_: Exception) {
                 loadError =
@@ -286,7 +303,7 @@ fun HomeScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(SkillLinkBackground)
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 24.dp)
     ) {
@@ -300,7 +317,7 @@ fun HomeScreen(
                 Text(
                     text = localizedText("Welcome back!"),
                     style = MaterialTheme.typography.headlineSmall,
-                    color = SkillLinkNavy,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold
                 )
 
@@ -309,7 +326,7 @@ fun HomeScreen(
                 Text(
                     text = localizedText("Ready to learn something new?"),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF777277)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -317,7 +334,7 @@ fun HomeScreen(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(SkillLinkLightPurple),
+                    .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
             ) {
                 ProfileAvatar(
@@ -365,7 +382,7 @@ fun HomeScreen(
         Text(
             text = localizedText("Recommended skills"),
             style = MaterialTheme.typography.titleLarge,
-            color = SkillLinkNavy,
+            color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.SemiBold
         )
 
@@ -401,7 +418,7 @@ fun HomeScreen(
             Text(
                 text = localizedText("Your learning journey"),
                 style = MaterialTheme.typography.titleLarge,
-                color = SkillLinkNavy,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.SemiBold
             )
 
@@ -421,7 +438,7 @@ fun HomeScreen(
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
-            color = SkillLinkCardBackground
+            color = MaterialTheme.colorScheme.surfaceVariant
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 if (isLoading) {
@@ -442,7 +459,7 @@ fun HomeScreen(
                                 "Loading your learning journey..."
                             ),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFF777277)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 } else {
@@ -450,7 +467,7 @@ fun HomeScreen(
                         Text(
                             text = roadmapTitle,
                             style = MaterialTheme.typography.titleMedium,
-                            color = SkillLinkNavy,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.Bold
                         )
 
@@ -465,7 +482,7 @@ fun HomeScreen(
                                 }
                             ),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFF777277)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
                         Spacer(modifier = Modifier.height(18.dp))
@@ -488,7 +505,7 @@ fun HomeScreen(
                                 total = totalLessons
                             ),
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF777277)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
                         Spacer(modifier = Modifier.height(18.dp))
@@ -528,7 +545,7 @@ fun HomeScreen(
                         Text(
                             text = localizedText("Start your learning journey"),
                             style = MaterialTheme.typography.titleMedium,
-                            color = SkillLinkNavy,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.Bold
                         )
 
@@ -539,7 +556,7 @@ fun HomeScreen(
                                 "Tell SkillLink what you want to learn and create a personalised roadmap."
                             ),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFF777277)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
                         Spacer(modifier = Modifier.height(18.dp))
@@ -584,6 +601,28 @@ fun HomeScreen(
     }
 }
 
+private fun buildWeeklyActivity(progress: List<ProgressRecord>): List<Int> {
+    val today = LocalDate.now()
+    val startDate = today.minusDays(6)
+    val countsByDate = progress.mapNotNull { record ->
+        if (!record.is_completed || record.completed_at.isNullOrBlank()) {
+            null
+        } else {
+            runCatching {
+                Instant.parse(record.completed_at)
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDate()
+            }.getOrNull()
+        }
+    }.filter { date -> !date.isBefore(startDate) && !date.isAfter(today) }
+        .groupingBy { it }
+        .eachCount()
+
+    return (0L..6L).map { offset ->
+        countsByDate[today.minusDays(6L - offset)] ?: 0
+    }
+}
+
 // Skill card
 @Composable
 private fun SkillCard(
@@ -618,7 +657,7 @@ private fun SkillCard(
             Text(
                 text = skillName,
                 style = MaterialTheme.typography.titleMedium,
-                color = SkillLinkNavy,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.SemiBold
             )
 
@@ -627,7 +666,7 @@ private fun SkillCard(
             Text(
                 text = description,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF777277)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

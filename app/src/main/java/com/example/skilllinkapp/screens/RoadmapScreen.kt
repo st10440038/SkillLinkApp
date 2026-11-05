@@ -1,6 +1,9 @@
 
 package com.example.skilllinkapp.screens
 
+import com.example.skilllinkapp.notifications.NotificationRepository
+import com.example.skilllinkapp.SkillLinkNotificationBanner
+import com.example.skilllinkapp.notifications.NotificationEventBus
 import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
@@ -82,6 +85,10 @@ data class GeneratedRoadmap(
 fun RoadmapScreen(
     roadmapJson: String = "",
     roadmapId: String = "",
+    notificationTitle: String = "",
+    notificationMessage: String = "",
+    showNotificationBanner: Boolean = false,
+    onDismissNotification: () -> Unit = {},
     onBack: () -> Unit
 ) {
 
@@ -234,8 +241,7 @@ fun RoadmapScreen(
         it.lessons.size
     } ?: 0
 
-    val completedLessons = roadmap?.weeks?.flatMapIndexed {
-            weekIndex, week ->
+    val completedLessons = roadmap?.weeks?.flatMapIndexed { weekIndex, week ->
         week.lessons.mapIndexedNotNull { lessonIndex, _ ->
             val stepOrder = (weekIndex * 3) + lessonIndex + 1
 
@@ -252,74 +258,15 @@ fun RoadmapScreen(
             0f
         }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(PageBackground)
-            .verticalScroll(rememberScrollState())
+    Box(
+        modifier = Modifier.fillMaxSize()
     ) {
-
-        if (isTranslating) {
-            CircularProgressIndicator()
-        }
-
-        translationError?.let { error ->
-            Text(
-                text = "Translation failed: $error",
-                color = MaterialTheme.colorScheme.error
-            )
-        }
-
-        // TOP BAR
-
-        Row(
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(
-                    horizontal = 20.dp,
-                    vertical = 16.dp
-                ),
-            verticalAlignment = Alignment.CenterVertically
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .verticalScroll(rememberScrollState())
         ) {
-            Surface(
-                onClick = onBack,
-                shape = RoundedCornerShape(13.dp),
-                color = White,
-                shadowElevation = 1.dp
-            ) {
-                Box(
-                    modifier = Modifier.size(44.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "‹",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = SkillLinkNavy,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(14.dp))
-
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = roadmapScreenText("Learning roadmap"),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = SkillLinkNavy,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Text(
-                    text = roadmapScreenText(
-                        "Your personalised learning journey"
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
-                )
-            }
 
             if (isTranslating) {
                 CircularProgressIndicator()
@@ -331,310 +278,237 @@ fun RoadmapScreen(
                     color = MaterialTheme.colorScheme.error
                 )
             }
-        }
 
-        if (roadmap == null) {
+            // TOP BAR
 
-            // EMPTY / INVALID STATE
-
-            Column(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Spacer(modifier = Modifier.height(40.dp))
-
-                Image(
-                    painter = painterResource(
-                        id = R.drawable.skilllink_logo
+                    .padding(
+                        horizontal = 20.dp,
+                        vertical = 16.dp
                     ),
-                    contentDescription = "SkillLink logo",
-                    modifier = Modifier.size(82.dp),
-                    contentScale = ContentScale.Fit
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Text(
-                    text = roadmapScreenText("No roadmap available"),
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = SkillLinkNavy,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = roadmapScreenText(
-                        "Your roadmap will appear here after it has been generated."
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary
-                )
-            }
-
-        } else {
-
-            // Keep a non-null reference inside this entire branch.
-            val roadmapData = roadmap
-
-            // HERO
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(SkillLinkPurple)
-                    .padding(22.dp)
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
+                Surface(
+                    onClick = onBack,
+                    shape = RoundedCornerShape(13.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowElevation = 1.dp
                 ) {
-                    Image(
-                        painter = painterResource(
-                            id = R.drawable.skilllink_logo
-                        ),
-                        contentDescription = "SkillLink logo",
-                        modifier = Modifier.size(50.dp),
-                        contentScale = ContentScale.Fit
-                    )
-
-                    Spacer(modifier = Modifier.width(14.dp))
-
-                    Column(
-                        modifier = Modifier.weight(1f)
+                    Box(
+                        modifier = Modifier.size(44.dp),
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = roadmapScreenText("Your roadmap"),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.78f)
-                        )
-
-                        Text(
-                            text = roadmapData.title,
-                            style = MaterialTheme.typography.titleLarge,
-                            color = Color.White,
+                            text = "‹",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.width(14.dp))
 
-                Text(
-                    text = roadmapData.summary,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.9f)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // PROGRESS CARD
-
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                shape = RoundedCornerShape(20.dp),
-                color = White,
-                shadowElevation = 1.dp
-            ) {
-                Column(
-                    modifier = Modifier.padding(18.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(
-                                text = roadmapScreenText("Your progress"),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = SkillLinkNavy,
-                                fontWeight = FontWeight.Bold
-                            )
-
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            val progressMessage = when {
-                                completedLessons == 0 ->
-                                    roadmapScreenText(
-                                        "Ready to get started?"
-                                    )
-
-                                totalLessons > 0 &&
-                                        completedLessons == totalLessons ->
-                                    roadmapScreenText(
-                                        "Roadmap completed!"
-                                    )
-
-                                else -> roadmapScreenText(
-                                    "lessons_progress"
-                                ).replace(
-                                    "{completed}",
-                                    completedLessons.toString()
-                                ).replace(
-                                    "{total}",
-                                    totalLessons.toString()
-                                )
-                            }
-
-                            Text(
-                                text = progressMessage,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary
-                            )
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .size(54.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    if (
-                                        completedLessons == totalLessons &&
-                                        totalLessons > 0
-                                    ) {
-                                        SoftGreen
-                                    } else {
-                                        SoftPurple
-                                    }
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "${(progressPercentage * 100).toInt()}%",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = if (
-                                    completedLessons == totalLessons &&
-                                    totalLessons > 0
-                                ) {
-                                    Green
-                                } else {
-                                    SkillLinkPurple
-                                },
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(9.dp)
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(SoftPurple)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth(progressPercentage)
-                                .height(9.dp)
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(SkillLinkPurple)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(28.dp))
-
-            // PLAN HEADER
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
                 Column(
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(
-                        text = roadmapScreenText("Your learning plan"),
+                        text = roadmapScreenText("Learning roadmap"),
                         style = MaterialTheme.typography.titleLarge,
-                        color = SkillLinkNavy,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold
                     )
 
                     Text(
-                        text = roadmapScreenText("plan_count")
-                            .replace(
-                                "{weeks}",
-                                roadmapData.weeks.size.toString()
-                            )
-                            .replace(
-                                "{lessons}",
-                                totalLessons.toString()
-                            ),
+                        text = roadmapScreenText(
+                            "Your personalised learning journey"
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary
                     )
                 }
 
-                if (isLoadingProgress) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = SkillLinkPurple,
-                        strokeWidth = 2.dp
+                if (isTranslating) {
+                    CircularProgressIndicator()
+                }
+
+                translationError?.let { error ->
+                    Text(
+                        text = "Translation failed: $error",
+                        color = MaterialTheme.colorScheme.error
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            if (roadmap == null) {
 
-            // WEEKS
+                // EMPTY / INVALID STATE
 
-            roadmapData.weeks.forEachIndexed { weekIndex, week ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Spacer(modifier = Modifier.height(40.dp))
 
-                val weekStartOrder = weekIndex * 3 + 1
+                    Image(
+                        painter = painterResource(
+                            id = R.drawable.skilllink_logo
+                        ),
+                        contentDescription = "SkillLink logo",
+                        modifier = Modifier.size(82.dp),
+                        contentScale = ContentScale.Fit
+                    )
 
-                val completedWeekLessons =
-                    week.lessons.mapIndexed { lessonIndex, _ ->
-                        val stepOrder = weekStartOrder + lessonIndex
+                    Spacer(modifier = Modifier.height(20.dp))
 
-                        progressRecords.any {
-                            it.step_order == stepOrder && it.is_completed
+                    Text(
+                        text = roadmapScreenText("No roadmap available"),
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = roadmapScreenText(
+                            "Your roadmap will appear here after it has been generated."
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary
+                    )
+                }
+
+            } else {
+
+                // Keep a non-null reference inside this entire branch.
+                val roadmapData = roadmap
+
+                // HERO
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(SkillLinkPurple)
+                        .padding(22.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Image(
+                            painter = painterResource(
+                                id = R.drawable.skilllink_logo
+                            ),
+                            contentDescription = "SkillLink logo",
+                            modifier = Modifier.size(50.dp),
+                            contentScale = ContentScale.Fit
+                        )
+
+                        Spacer(modifier = Modifier.width(14.dp))
+
+                        Column(
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = roadmapScreenText("Your roadmap"),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White.copy(alpha = 0.78f)
+                            )
+
+                            Text(
+                                text = roadmapData.title,
+                                style = MaterialTheme.typography.titleLarge,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
-                    }.count { it }
+                    }
 
-                val weekCompleted =
-                    week.lessons.isNotEmpty() &&
-                            completedWeekLessons == week.lessons.size
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    Text(
+                        text = roadmapData.summary,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.9f)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // PROGRESS CARD
 
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(
-                            horizontal = 20.dp,
-                            vertical = 7.dp
-                        ),
+                        .padding(horizontal = 20.dp),
                     shape = RoundedCornerShape(20.dp),
-                    color = White,
+                    color = MaterialTheme.colorScheme.surface,
                     shadowElevation = 1.dp
                 ) {
                     Column(
                         modifier = Modifier.padding(18.dp)
                     ) {
-
-                        // WEEK HEADER
-
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            Column(
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = roadmapScreenText("Your progress"),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontWeight = FontWeight.Bold
+                                )
+
+                                Spacer(modifier = Modifier.height(4.dp))
+
+                                val progressMessage = when {
+                                    completedLessons == 0 ->
+                                        roadmapScreenText(
+                                            "Ready to get started?"
+                                        )
+
+                                    totalLessons > 0 &&
+                                            completedLessons == totalLessons ->
+                                        roadmapScreenText(
+                                            "Roadmap completed!"
+                                        )
+
+                                    else -> roadmapScreenText(
+                                        "lessons_progress"
+                                    ).replace(
+                                        "{completed}",
+                                        completedLessons.toString()
+                                    ).replace(
+                                        "{total}",
+                                        totalLessons.toString()
+                                    )
+                                }
+
+                                Text(
+                                    text = progressMessage,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextSecondary
+                                )
+                            }
+
                             Box(
                                 modifier = Modifier
-                                    .size(42.dp)
+                                    .size(54.dp)
                                     .clip(CircleShape)
                                     .background(
-                                        if (weekCompleted) {
+                                        if (
+                                            completedLessons == totalLessons &&
+                                            totalLessons > 0
+                                        ) {
                                             SoftGreen
                                         } else {
                                             SoftPurple
@@ -643,320 +517,491 @@ fun RoadmapScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "${weekIndex + 1}",
-                                    color = if (weekCompleted) {
+                                    text = "${(progressPercentage * 100).toInt()}%",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = if (
+                                        completedLessons == totalLessons &&
+                                        totalLessons > 0
+                                    ) {
                                         Green
                                     } else {
                                         SkillLinkPurple
                                     },
                                     fontWeight = FontWeight.Bold
                                 )
-                            }
-
-                            Spacer(modifier = Modifier.width(12.dp))
-
-                            Column(
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(
-                                    text = roadmapScreenText("week_label")
-                                        .replace(
-                                            "{week}",
-                                            (weekIndex + 1).toString()
-                                        ),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = if (weekCompleted) {
-                                        Green
-                                    } else {
-                                        SkillLinkPurple
-                                    },
-                                    fontWeight = FontWeight.Bold
-                                )
-
-                                Spacer(modifier = Modifier.height(2.dp))
-
-                                Text(
-                                    text = week.title,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = SkillLinkNavy,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-
-                            if (weekCompleted) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(30.dp)
-                                        .clip(CircleShape)
-                                        .background(SoftGreen),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "✓",
-                                        color = Green,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(14.dp))
-
-                        Text(
-                            text = week.description,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = TextSecondary
-                        )
-
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // LESSONS
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(9.dp)
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(SoftPurple)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(progressPercentage)
+                                    .height(9.dp)
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(SkillLinkPurple)
+                            )
+                        }
+                    }
+                }
 
-                        week.lessons.forEachIndexed { lessonIndex, lesson ->
+                Spacer(modifier = Modifier.height(28.dp))
 
-                            val stepOrder =
-                                (weekIndex * 3) + lessonIndex + 1
+                // PLAN HEADER
 
-                            val originalWeek = originalRoadmap
-                                ?.weeks
-                                ?.getOrNull(weekIndex)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = roadmapScreenText("Your learning plan"),
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.Bold
+                        )
 
-                            val originalLesson = originalWeek
-                                ?.lessons
-                                ?.getOrNull(lessonIndex)
-                                ?: lesson
+                        Text(
+                            text = roadmapScreenText("plan_count")
+                                .replace(
+                                    "{weeks}",
+                                    roadmapData.weeks.size.toString()
+                                )
+                                .replace(
+                                    "{lessons}",
+                                    totalLessons.toString()
+                                ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
+                    }
 
-                            val originalDescription =
-                                originalWeek?.description
-                                    ?: week.description
+                    if (isLoadingProgress) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = SkillLinkPurple,
+                            strokeWidth = 2.dp
+                        )
+                    }
+                }
 
-                            val completed = progressRecords.any {
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // WEEKS
+
+                roadmapData.weeks.forEachIndexed { weekIndex, week ->
+
+                    val weekStartOrder = weekIndex * 3 + 1
+
+                    val completedWeekLessons =
+                        week.lessons.mapIndexed { lessonIndex, _ ->
+                            val stepOrder = weekStartOrder + lessonIndex
+
+                            progressRecords.any {
                                 it.step_order == stepOrder && it.is_completed
                             }
+                        }.count { it }
 
-                            LessonRow(
-                                lessonNumber = lessonIndex + 1,
+                    val weekCompleted =
+                        week.lessons.isNotEmpty() &&
+                                completedWeekLessons == week.lessons.size
 
-                                // Display the translated lesson.
-                                lesson = lesson,
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(
+                                horizontal = 20.dp,
+                                vertical = 7.dp
+                            ),
+                        shape = RoundedCornerShape(20.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        shadowElevation = 1.dp
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(18.dp)
+                        ) {
 
-                                completed = completed,
-                                onCheckedChange = { checked ->
+                            // WEEK HEADER
 
-                                    val user =
-                                        supabase.auth.currentUserOrNull()
-
-                                    if (user == null) {
-                                        errorMessage = roadmapScreenText(
-                                            "You must be logged in."
-                                        )
-                                        return@LessonRow
-                                    }
-
-                                    errorMessage = ""
-
-                                    val wasCompleted = completed
-                                    val previousCompletedCount =
-                                        completedLessons
-
-                                    // Save the original text in the progress record.
-                                    val updatedRecord = ProgressRecord(
-                                        progress_id = null,
-                                        roadmap_id = roadmapId,
-                                        user_id = user.id,
-                                        step_title = originalLesson,
-                                        step_description = originalDescription,
-                                        step_order = stepOrder,
-                                        is_completed = checked,
-                                        completed_at = if (checked) {
-                                            java.time.Instant.now().toString()
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            if (weekCompleted) {
+                                                SoftGreen
+                                            } else {
+                                                SoftPurple
+                                            }
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "${weekIndex + 1}",
+                                        color = if (weekCompleted) {
+                                            Green
                                         } else {
-                                            null
-                                        }
+                                            SkillLinkPurple
+                                        },
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(12.dp))
+
+                                Column(
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(
+                                        text = roadmapScreenText("week_label")
+                                            .replace(
+                                                "{week}",
+                                                (weekIndex + 1).toString()
+                                            ),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = if (weekCompleted) {
+                                            Green
+                                        } else {
+                                            SkillLinkPurple
+                                        },
+                                        fontWeight = FontWeight.Bold
                                     )
 
-                                    progressRecords = progressRecords
-                                        .filterNot {
-                                            it.step_order == stepOrder
+                                    Spacer(modifier = Modifier.height(2.dp))
+
+                                    Text(
+                                        text = week.title,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+
+                                if (weekCompleted) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(30.dp)
+                                            .clip(CircleShape)
+                                            .background(SoftGreen),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "✓",
+                                            color = Green,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            Text(
+                                text = week.description,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextSecondary
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            // LESSONS
+
+                            week.lessons.forEachIndexed { lessonIndex, lesson ->
+
+                                val stepOrder =
+                                    (weekIndex * 3) + lessonIndex + 1
+
+                                val originalWeek = originalRoadmap
+                                    ?.weeks
+                                    ?.getOrNull(weekIndex)
+
+                                val originalLesson = originalWeek
+                                    ?.lessons
+                                    ?.getOrNull(lessonIndex)
+                                    ?: lesson
+
+                                val originalDescription =
+                                    originalWeek?.description
+                                        ?: week.description
+
+                                val completed = progressRecords.any {
+                                    it.step_order == stepOrder && it.is_completed
+                                }
+
+                                LessonRow(
+                                    lessonNumber = lessonIndex + 1,
+
+                                    // Display the translated lesson.
+                                    lesson = lesson,
+
+                                    completed = completed,
+                                    onCheckedChange = { checked ->
+
+                                        val user =
+                                            supabase.auth.currentUserOrNull()
+
+                                        if (user == null) {
+                                            errorMessage = roadmapScreenText(
+                                                "You must be logged in."
+                                            )
+                                            return@LessonRow
                                         }
-                                        .plus(updatedRecord)
 
-                                    scope.launch {
-                                        try {
-                                            if (roadmapId.isNotBlank()) {
+                                        errorMessage = ""
 
-                                                // Save progress.
-                                                ProgressRepository.saveProgress(
-                                                    roadmapId = roadmapId,
-                                                    userId = user.id,
-                                                    stepTitle = originalLesson,
-                                                    stepDescription = originalDescription,
-                                                    stepOrder = stepOrder,
-                                                    isCompleted = checked
-                                                )
+                                        val wasCompleted = completed
+                                        val previousCompletedCount =
+                                            completedLessons
 
-                                                // Refresh progress.
-                                                val refreshedProgress =
-                                                    ProgressRepository.getProgress(
+                                        // Save the original text in the progress record.
+                                        val updatedRecord = ProgressRecord(
+                                            progress_id = null,
+                                            roadmap_id = roadmapId,
+                                            user_id = user.id,
+                                            step_title = originalLesson,
+                                            step_description = originalDescription,
+                                            step_order = stepOrder,
+                                            is_completed = checked,
+                                            completed_at = if (checked) {
+                                                java.time.Instant.now().toString()
+                                            } else {
+                                                null
+                                            }
+                                        )
+
+                                        progressRecords = progressRecords
+                                            .filterNot {
+                                                it.step_order == stepOrder
+                                            }
+                                            .plus(updatedRecord)
+
+                                        scope.launch {
+                                            try {
+                                                if (roadmapId.isNotBlank()) {
+
+                                                    // Save progress.
+                                                    ProgressRepository.saveProgress(
                                                         roadmapId = roadmapId,
-                                                        userId = user.id
+                                                        userId = user.id,
+                                                        stepTitle = originalLesson,
+                                                        stepDescription = originalDescription,
+                                                        stepOrder = stepOrder,
+                                                        isCompleted = checked
                                                     )
 
-                                                progressRecords = refreshedProgress
+                                                    // Refresh progress.
+                                                    val refreshedProgress =
+                                                        ProgressRepository.getProgress(
+                                                            roadmapId = roadmapId,
+                                                            userId = user.id
+                                                        )
 
-                                                // Notifications only when a lesson becomes completed.
-                                                if (checked && !wasCompleted) {
+                                                    // Notifications only when a lesson becomes completed.
+                                                    progressRecords = refreshedProgress
 
-                                                    SkillLinkNotificationDispatcher.recordLearningActivity(
-                                                        context
-                                                    )
+// Show an in-app popup only after a lesson is successfully saved.
+                                                    if (checked && !wasCompleted) {
 
-                                                    // Count completed lessons.
-                                                    val newCompletedCount =
-                                                        roadmapData.weeks
-                                                            .flatMapIndexed {
-                                                                    weekIndex, roadmapWeek ->
-                                                                roadmapWeek.lessons.mapIndexed {
-                                                                        lessonIndex, _ ->
-                                                                    val order =
-                                                                        (weekIndex * 3) +
-                                                                                lessonIndex + 1
+                                                        // Count completed lessons.
+                                                        val newCompletedCount =
+                                                            roadmapData.weeks
+                                                                .flatMapIndexed { weekIndex, roadmapWeek ->
+                                                                    roadmapWeek.lessons.mapIndexed { lessonIndex, _ ->
+                                                                        val order =
+                                                                            (weekIndex * 3) + lessonIndex + 1
 
-                                                                    refreshedProgress.any {
-                                                                        it.step_order == order &&
-                                                                                it.is_completed
+                                                                        refreshedProgress.any {
+                                                                            it.step_order == order && it.is_completed
+                                                                        }
                                                                     }
                                                                 }
-                                                            }
-                                                            .count { it }
+                                                                .count { it }
 
-                                                    if (totalLessons > 0) {
+                                                        if (totalLessons > 0) {
+                                                            val previousPercentage =
+                                                                previousCompletedCount * 100 / totalLessons
 
-                                                        val previousPercentage =
-                                                            previousCompletedCount *
-                                                                    100 / totalLessons
+                                                            val newPercentage =
+                                                                newCompletedCount * 100 / totalLessons
 
-                                                        val newPercentage =
-                                                            newCompletedCount *
-                                                                    100 / totalLessons
+                                                            // 100%: Roadmap completed.
+                                                            if (
+                                                                newPercentage >= 100 &&
+                                                                previousPercentage < 100
+                                                            ) {
+                                                                val title = "Roadmap completed!"
+                                                                val message =
+                                                                    "Congratulations! You've completed your learning roadmap."
 
-                                                        // 100%: Roadmap completed.
-                                                        if (
-                                                            newPercentage >= 100 &&
-                                                            previousPercentage < 100
-                                                        ) {
-                                                            SkillLinkNotificationDispatcher.send(
-                                                                context = context,
-                                                                userId = user.id,
-                                                                title = "Roadmap completed!",
-                                                                message = "Congratulations! You've completed your learning roadmap.",
-                                                                notificationType = "roadmap_completed_$roadmapId",
-                                                                preventDuplicates = true
-                                                            )
+                                                                // Save the notification in Supabase.
+                                                                NotificationRepository.createNotification(
+                                                                    userId = user.id,
+                                                                    title = title,
+                                                                    message = message,
+                                                                    notificationType = "roadmap_completed"
+                                                                )
 
-                                                        } else {
+// Show the in-app popup.
+                                                                NotificationEventBus.publish(
+                                                                    title = title,
+                                                                    message = message
+                                                                )
 
-                                                            // 25%, 50% and 75% milestones.
-                                                            val milestones = listOf(
-                                                                25 to "You're making great progress!",
-                                                                50 to "You're halfway there!",
-                                                                75 to "You're almost there!"
-                                                            )
+// Keep the existing notification dispatcher.
+                                                                SkillLinkNotificationDispatcher.send(
+                                                                    context = context,
+                                                                    userId = user.id,
+                                                                    title = title,
+                                                                    message = message,
+                                                                    notificationType = "roadmap_completed_$roadmapId",
+                                                                    preventDuplicates = true
+                                                                )
 
-                                                            milestones.forEach {
-                                                                    (milestone, title) ->
+                                                            } else {
+                                                                // 25%, 50% and 75% milestones.
+                                                                val milestones = listOf(
+                                                                    25 to "You're making great progress!",
+                                                                    50 to "You're halfway there!",
+                                                                    75 to "You're almost there!"
+                                                                )
 
-                                                                if (
-                                                                    previousPercentage < milestone &&
-                                                                    newPercentage >= milestone
-                                                                ) {
-                                                                    SkillLinkNotificationDispatcher.send(
-                                                                        context = context,
-                                                                        userId = user.id,
-                                                                        title = title,
-                                                                        message = "You've reached $milestone% of your learning roadmap. Keep going!",
-                                                                        notificationType = "milestone_${roadmapId}_$milestone",
-                                                                        preventDuplicates = true
-                                                                    )
+                                                                milestones.forEach { (milestone, title) ->
+                                                                    if (
+                                                                        previousPercentage < milestone &&
+                                                                        newPercentage >= milestone
+                                                                    ) {
+                                                                        val message =
+                                                                            "You've reached $milestone% of your learning roadmap. Keep going!"
+
+                                                                        NotificationRepository.createNotification(
+                                                                            userId = user.id,
+                                                                            title = title,
+                                                                            message = message,
+                                                                            notificationType = "milestone_${roadmapId}_$milestone"
+                                                                        )
+
+                                                                        NotificationEventBus.publish(
+                                                                            title = title,
+                                                                            message = message
+                                                                        )
+
+                                                                        SkillLinkNotificationDispatcher.send(
+                                                                            context = context,
+                                                                            userId = user.id,
+                                                                            title = title,
+                                                                            message = message,
+                                                                            notificationType = "milestone_${roadmapId}_$milestone",
+                                                                            preventDuplicates = true
+                                                                        )
+                                                                    }
                                                                 }
                                                             }
                                                         }
                                                     }
                                                 }
-                                            }
-                                        } catch (e: Exception) {
-                                            errorMessage = e.message
-                                                ?: roadmapScreenText(
-                                                    "Could not save progress."
-                                                )
+                                            } catch (e: Exception) {
+                                                errorMessage = e.message
+                                                    ?: roadmapScreenText(
+                                                        "Could not save progress."
+                                                    )
 
-                                            if (roadmapId.isNotBlank()) {
-                                                try {
-                                                    progressRecords =
-                                                        ProgressRepository.getProgress(
-                                                            roadmapId = roadmapId,
-                                                            userId = user.id
-                                                        )
-                                                } catch (_: Exception) {
-                                                    // Preserve the current state.
+                                                if (roadmapId.isNotBlank()) {
+                                                    try {
+                                                        progressRecords =
+                                                            ProgressRepository.getProgress(
+                                                                roadmapId = roadmapId,
+                                                                userId = user.id
+                                                            )
+                                                    } catch (_: Exception) {
+                                                        // Preserve the current state.
+                                                    }
                                                 }
                                             }
                                         }
                                     }
-                                }
-                            )
+                                )
 
-                            if (lessonIndex < week.lessons.lastIndex) {
-                                Spacer(modifier = Modifier.height(8.dp))
+                                if (lessonIndex < week.lessons.lastIndex) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            // ERROR
+                // ERROR
 
-            if (errorMessage.isNotEmpty()) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            horizontal = 20.dp,
-                            vertical = 12.dp
-                        ),
-                    shape = RoundedCornerShape(14.dp),
-                    color = Color(0xFFFFF0F0)
-                ) {
-                    Text(
-                        text = errorMessage,
-                        modifier = Modifier.padding(16.dp),
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                if (errorMessage.isNotEmpty()) {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(
+                                horizontal = 20.dp,
+                                vertical = 12.dp
+                            ),
+                        shape = RoundedCornerShape(14.dp),
+                        color = Color(0xFFFFF0F0)
+                    ) {
+                        Text(
+                            text = errorMessage,
+                            modifier = Modifier.padding(16.dp),
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
                 }
             }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // BACK BUTTON
+
+            OutlinedButton(
+                onClick = onBack,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .height(52.dp),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Text(
+                    text = roadmapScreenText("Back to My Learning"),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // BACK BUTTON
-
-        OutlinedButton(
-            onClick = onBack,
+        // IN-APP NOTIFICATION BANNER
+        SkillLinkNotificationBanner(
+            title = notificationTitle,
+            message = notificationMessage,
+            visible = showNotificationBanner,
+            onDismiss = onDismissNotification,
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .height(52.dp),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Text(
-                text = roadmapScreenText("Back to My Learning"),
-                color = SkillLinkNavy,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
+                .align(Alignment.TopCenter)
+                .padding(
+                    horizontal = 16.dp,
+                    vertical = 8.dp
+                )
+        )
     }
 }
 
@@ -1054,10 +1099,13 @@ private fun roadmapScreenText(english: String): String {
             "Learning roadmap" -> "Leerplan"
             "Your personalised learning journey" ->
                 "Jou persoonlike leerreis"
+
             "No roadmap available" ->
                 "Geen leerplan beskikbaar nie"
+
             "Your roadmap will appear here after it has been generated." ->
                 "Jou leerplan sal hier verskyn nadat dit geskep is."
+
             "Your roadmap" -> "Jou leerplan"
             "Your progress" -> "Jou vordering"
             "Ready to get started?" -> "Gereed om te begin?"
@@ -1069,6 +1117,7 @@ private fun roadmapScreenText(english: String): String {
             "Could not save progress." -> "Kon nie vordering stoor nie."
             "lessons_progress" ->
                 "{completed} van {total} lesse voltooi"
+
             "plan_count" -> "{weeks} weke • {lessons} lesse"
             "week_label" -> "Week {week}"
             else -> english
@@ -1078,10 +1127,13 @@ private fun roadmapScreenText(english: String): String {
             "Learning roadmap" -> "Uhlelo lokufunda"
             "Your personalised learning journey" ->
                 "Uhambo lwakho lokufunda oluqondene nawe"
+
             "No roadmap available" ->
                 "Alukho uhlelo lokufunda olutholakalayo"
+
             "Your roadmap will appear here after it has been generated." ->
                 "Uhlelo lwakho lokufunda luzovela lapha uma seludaliwe."
+
             "Your roadmap" -> "Uhlelo lwakho lokufunda"
             "Your progress" -> "Inqubekelaphambili yakho"
             "Ready to get started?" -> "Usukulungele ukuqala?"
@@ -1090,12 +1142,16 @@ private fun roadmapScreenText(english: String): String {
             "Back to My Learning" -> "Buyela Ekufundeni Kwami"
             "You must be logged in." ->
                 "Kufanele ungene ku-akhawunti yakho."
+
             "Could not load progress." ->
                 "Ayikwazanga ukulayisha inqubekelaphambili."
+
             "Could not save progress." ->
                 "Ayikwazanga ukugcina inqubekelaphambili."
+
             "lessons_progress" ->
                 "{completed} kwezingu-{total} izifundo seziqediwe"
+
             "plan_count" -> "{weeks} amasonto • {lessons} izifundo"
             "week_label" -> "Isonto {week}"
             else -> english
@@ -1104,6 +1160,7 @@ private fun roadmapScreenText(english: String): String {
         else -> when (english) {
             "lessons_progress" ->
                 "{completed} of {total} lessons completed"
+
             "plan_count" -> "{weeks} weeks • {lessons} lessons"
             "week_label" -> "Week {week}"
             else -> english

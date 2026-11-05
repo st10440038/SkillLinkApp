@@ -274,7 +274,7 @@ fun NotificationsScreen(
         topBar = {
 
             TopAppBar(
-                modifier = Modifier.height(64.dp),
+                modifier = Modifier.height(68.dp),
                 windowInsets = WindowInsets(0.dp),
 
                 title = {
@@ -515,18 +515,17 @@ fun NotificationsScreen(
                                     },
 
                                 colors = CardDefaults.cardColors(
-
-                                    containerColor =
-                                        if (notification.isRead) {
-
-                                            MaterialTheme.colorScheme.surfaceVariant
-
-                                        } else {
-
-                                            MaterialTheme.colorScheme.primaryContainer
-                                        }
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                ),
+                                elevation = CardDefaults.cardElevation(
+                                    defaultElevation = 2.dp,
+                                    pressedElevation = 4.dp
+                                ),
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    if (notification.isRead) MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
+                                    else MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
                                 )
-
                             ) {
 
                                 Column(
@@ -545,7 +544,7 @@ fun NotificationsScreen(
                                             ]?.first ?: notification.title,
 
                                             fontWeight = FontWeight.Bold,
-
+                                            color = MaterialTheme.colorScheme.onSurface,
                                             modifier = Modifier.weight(1f)
                                         )
 
@@ -609,7 +608,9 @@ fun NotificationsScreen(
                                     Text(
                                         text = translatedNotifications[
                                             notification.notificationId
-                                        ]?.second ?: notification.message
+                                        ]?.second ?: notification.message,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        style = MaterialTheme.typography.bodyMedium
                                     )
 
                                     Spacer(

@@ -1,5 +1,7 @@
 package com.example.skilllinkapp
 
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.IconButton
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -35,6 +37,7 @@ import io.github.jan.supabase.auth.status.SessionStatus
 import com.example.skilllinkapp.LanguageSupport
 import com.example.skilllinkapp.localizedText
 import android.content.Intent
+import android.content.Context
 import android.os.Bundle
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.activity.ComponentActivity
@@ -123,8 +126,23 @@ class MainActivity : ComponentActivity() {
             }
 
         setContent {
-            SkillLinkAppTheme {
-                SkillLinkApp()
+            val themePreferences = remember {
+                getSharedPreferences("skilllink_preferences", Context.MODE_PRIVATE)
+            }
+            var isDarkMode by remember {
+                mutableStateOf(themePreferences.getBoolean("dark_mode_enabled", false))
+            }
+
+            SkillLinkAppTheme(darkTheme = isDarkMode) {
+                SkillLinkApp(
+                    isDarkMode = isDarkMode,
+                    onDarkModeChange = { enabled ->
+                        isDarkMode = enabled
+                        themePreferences.edit()
+                            .putBoolean("dark_mode_enabled", enabled)
+                            .apply()
+                    }
+                )
             }
         }
     }
@@ -139,7 +157,10 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SkillLinkApp() {
+fun SkillLinkApp(
+    isDarkMode: Boolean,
+    onDarkModeChange: (Boolean) -> Unit
+) {
 
     val scope = rememberCoroutineScope()
 
@@ -190,11 +211,8 @@ fun SkillLinkApp() {
     }
 
     LaunchedEffect(notificationVersion) {
-
         if (notificationVersion > 0) {
-
-            delay(4500)
-
+            delay(3500)
             showNotificationBanner = false
         }
     }
@@ -564,18 +582,18 @@ fun SkillLinkApp() {
     ) {
 
         RoadmapScreen(
-
             roadmapJson = generatedRoadmap,
-
             roadmapId = generatedRoadmapId,
-
+            notificationTitle = notificationTitle,
+            notificationMessage = notificationMessage,
+            showNotificationBanner = showNotificationBanner,
+            onDismissNotification = {
+                showNotificationBanner = false
+            },
             onBack = {
-
                 generatedRoadmap = ""
                 generatedRoadmapId = ""
-
                 selectedPage = "learning"
-
                 myLearningRefreshKey++
             }
         )
@@ -940,6 +958,8 @@ fun SkillLinkApp() {
                 ) {
 
                     SettingsScreen(
+                        isDarkMode = isDarkMode,
+                        onDarkModeChange = onDarkModeChange,
 
                         onBack = {
 
@@ -988,18 +1008,13 @@ fun SkillLinkApp() {
         // SKILLLINK TOP NOTIFICATION BANNER
         // =====================================================
 
-        AnimatedVisibility(
-
+        SkillLinkNotificationBanner(
+            title = notificationTitle,
+            message = notificationMessage,
             visible = showNotificationBanner,
-
-            enter = slideInVertically(
-                initialOffsetY = { -it }
-            ) + fadeIn(),
-
-            exit = slideOutVertically(
-                targetOffsetY = { -it }
-            ) + fadeOut(),
-
+            onDismiss = {
+                showNotificationBanner = false
+            },
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .statusBarsPadding()
@@ -1007,92 +1022,87 @@ fun SkillLinkApp() {
                     horizontal = 16.dp,
                     vertical = 8.dp
                 )
+        )
+    }
 
+} // Closes the outer Box
+
+
+@Composable
+fun SkillLinkNotificationBanner(
+    title: String,
+    message: String,
+    visible: Boolean,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = slideInVertically(
+            initialOffsetY = { -it }
+        ) + fadeIn(),
+        exit = slideOutVertically(
+            targetOffsetY = { -it }
+        ) + fadeOut(),
+        modifier = modifier
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            color = Color.White,
+            shadowElevation = 10.dp,
+            border = BorderStroke(
+                1.dp,
+                Color(0xFFE7E2EF)
+            )
         ) {
-
-            Surface(
-
-                modifier = Modifier.fillMaxWidth(),
-
-                shape = RoundedCornerShape(20.dp),
-
-                color = Color.White,
-
-                shadowElevation = 10.dp,
-
-                border = BorderStroke(
-                    1.dp,
-                    Color(0xFFE7E2EF)
-                )
-
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-
-                Row(
-
-                    modifier = Modifier.padding(16.dp),
-
-                    verticalAlignment = Alignment.CenterVertically,
-
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-
+                Box(
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Color(0xFFEDE5FF)),
+                    contentAlignment = Alignment.Center
                 ) {
+                    Icon(
+                        imageVector = Icons.Default.Notifications,
+                        contentDescription = "Notification",
+                        tint = Color(0xFF7041C6),
+                        modifier = Modifier.size(25.dp)
+                    )
+                }
 
-                    Box(
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = title,
+                        style = androidx.compose.material3.MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF39205F)
+                    )
 
-                        modifier = Modifier
-                            .size(46.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(Color(0xFFEDE5FF)),
+                    Spacer(modifier = Modifier.height(4.dp))
 
-                        contentAlignment = Alignment.Center
+                    Text(
+                        text = message,
+                        style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF77737D)
+                    )
+                }
 
-                    ) {
-
-                        Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = "Notification",
-                            tint = Color(0xFF7041C6),
-                            modifier = Modifier.size(25.dp)
-                        )
-                    }
-
-                    Column(
-                        modifier = Modifier.weight(1f)
-                    ) {
-
-                        Text(
-                            text = notificationTitle,
-                            style = androidx.compose.material3.MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF39205F)
-                        )
-
-                        Spacer(
-                            modifier = Modifier.height(4.dp)
-                        )
-
-                        Text(
-                            text = notificationMessage,
-                            style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF77737D)
-                        )
-                    }
-
-                    IconButton(
-                        onClick = {
-                            showNotificationBanner = false
-                        }
-                    ) {
-
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Dismiss notification",
-                            tint = Color(0xFF77737D)
-                        )
-                    }
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Dismiss notification",
+                        tint = Color(0xFF77737D)
+                    )
                 }
             }
         }
-
-    } // Closes the outer Box
+    }
 }

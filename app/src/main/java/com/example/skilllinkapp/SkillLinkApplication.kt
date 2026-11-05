@@ -1,6 +1,6 @@
+
 package com.example.skilllinkapp
 
-import com.example.skilllinkapp.notifications.SkillLinkNotificationScheduler
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -12,6 +12,7 @@ import android.os.Build
 import com.example.skilllinkapp.data.ProgressRepository
 import com.example.skilllinkapp.data.local.SkillLinkDatabase
 import com.example.skilllinkapp.data.supabase
+import com.example.skilllinkapp.notifications.SkillLinkNotificationScheduler
 import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,9 +37,10 @@ class SkillLinkApplication : Application() {
         // Initialize the local Room database
         ProgressRepository.initialize(database.skillLinkDao())
 
-        // Create the notification channel for Firebase notifications
+        // Create the notification channel
         createNotificationChannel()
 
+        // Schedule weekly reminders
         SkillLinkNotificationScheduler.scheduleWeeklyReminder(this)
 
         // Monitor internet connectivity for automatic progress synchronization
@@ -74,9 +76,21 @@ class SkillLinkApplication : Application() {
             val channel = NotificationChannel(
                 NOTIFICATION_CHANNEL_ID,
                 "SkillLink Notifications",
-                NotificationManager.IMPORTANCE_DEFAULT
+                NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Learning updates and alerts from SkillLink"
+
+                description =
+                    "Learning updates and alerts from SkillLink"
+
+                // Keep notifications silent
+                setSound(null, null)
+
+                // Disable vibration
+                enableVibration(false)
+
+                // Allow heads-up notifications
+                lockscreenVisibility =
+                    android.app.Notification.VISIBILITY_PUBLIC
             }
 
             val notificationManager =
@@ -109,6 +123,6 @@ class SkillLinkApplication : Application() {
     }
 
     companion object {
-        const val NOTIFICATION_CHANNEL_ID = "skilllink_notifications"
+        const val NOTIFICATION_CHANNEL_ID = "skilllink_notifications_v3"
     }
 }

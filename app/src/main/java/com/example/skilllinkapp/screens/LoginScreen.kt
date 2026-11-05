@@ -1,7 +1,12 @@
 package com.example.skilllinkapp.screens
 
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.unit.dp
 import io.github.jan.supabase.auth.providers.Google
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -35,6 +41,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.skilllinkapp.LanguageSupport
+import com.example.skilllinkapp.R
 import com.example.skilllinkapp.data.supabase
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
@@ -55,15 +62,15 @@ fun LoginScreen(
     val scope = rememberCoroutineScope()
 
     val purple = Color(0xFF6C4AB6)
-    val lightPurple = Color(0xFFF4F0FF)
-    val textDark = Color(0xFF242124)
-    val textGray = Color(0xFF777277)
+    val lightPurple = MaterialTheme.colorScheme.primaryContainer
+    val textDark = MaterialTheme.colorScheme.onSurface
+    val textGray = MaterialTheme.colorScheme.onSurfaceVariant
     val errorColor = Color(0xFFB3261E)
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(
             modifier = Modifier
@@ -79,11 +86,11 @@ fun LoginScreen(
                     .padding(18.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "S",
-                    color = purple,
-                    fontSize = 38.sp,
-                    fontWeight = FontWeight.Bold
+                Image(
+                    painter = painterResource(id = R.drawable.skilllink_logo),
+                    contentDescription = "SkillLink logo",
+                    modifier = Modifier.size(64.dp),
+                    contentScale = ContentScale.Fit
                 )
             }
 

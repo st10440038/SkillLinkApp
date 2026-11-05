@@ -1,6 +1,7 @@
 
 package com.example.skilllinkapp.screens
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TextButton
 import com.example.skilllinkapp.data.ProfilePictureRepository
 import kotlinx.serialization.json.JsonNull
@@ -279,7 +280,7 @@ fun EditProfileScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF5F2FF))
+            .background(MaterialTheme.colorScheme.background)
             .padding(20.dp)
     ) {
         Row(

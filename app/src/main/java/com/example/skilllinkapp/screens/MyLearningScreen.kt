@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.jsonObject
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -48,6 +49,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -58,11 +61,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.skilllinkapp.data.ProgressRepository
 import com.example.skilllinkapp.data.supabase
-import com.example.skilllinkapp.ui.theme.SkillLinkNavy
 import com.example.skilllinkapp.ui.theme.SkillLinkPurple
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
@@ -669,7 +675,7 @@ fun MyLearningScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(PageBackground)
+            .background(MaterialTheme.colorScheme.background)
     ) {
 
         // =====================================================
@@ -715,14 +721,14 @@ fun MyLearningScreen(
                     Text(
                         text = myLearningText("My Learning"),
                         style = MaterialTheme.typography.headlineSmall,
-                        color = SkillLinkNavy,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold
                     )
 
                     Text(
                         text = myLearningText("Keep building your skills"),
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -883,7 +889,7 @@ fun MyLearningScreen(
                         Text(
                             text = myLearningText("Loading your roadmaps..."),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = TextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -979,7 +985,7 @@ fun MyLearningScreen(
                                     },
                                 style =
                                     MaterialTheme.typography.titleLarge,
-                                color = SkillLinkNavy,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 fontWeight = FontWeight.Bold
                             )
 
@@ -996,7 +1002,7 @@ fun MyLearningScreen(
                                     },
                                 style =
                                     MaterialTheme.typography.bodySmall,
-                                color = TextSecondary
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
 
                             Spacer(
@@ -1161,7 +1167,7 @@ fun MyLearningScreen(
             title = {
                 Text(
                     text = myLearningText("Delete roadmap?"),
-                    color = SkillLinkNavy,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold
                 )
             },
@@ -1360,13 +1366,13 @@ private fun LearningFilter(
             if (selected) {
                 SkillLinkPurple
             } else {
-                White
+                MaterialTheme.colorScheme.surface
             },
         border =
             if (!selected) {
                 BorderStroke(
                     1.dp,
-                    BorderColor
+                    MaterialTheme.colorScheme.outlineVariant
                 )
             } else {
                 null
@@ -1387,7 +1393,7 @@ private fun LearningFilter(
                     if (selected) {
                         Color.White
                     } else {
-                        SkillLinkNavy
+                        MaterialTheme.colorScheme.onSurface
                     },
                 fontWeight =
                     if (selected) {
@@ -1409,7 +1415,7 @@ private fun LearningFilter(
                         if (selected) {
                             Color.White.copy(alpha = 0.18f)
                         } else {
-                            SoftPurple
+                            MaterialTheme.colorScheme.primaryContainer
                         }
                     ),
                 contentAlignment = Alignment.Center
@@ -1456,7 +1462,7 @@ private fun RoadmapCard(
                 onClick = onClick
             ),
         shape = RoundedCornerShape(20.dp),
-        color = White,
+        color = MaterialTheme.colorScheme.surface,
         shadowElevation = 1.dp
     ) {
 
@@ -1474,9 +1480,9 @@ private fun RoadmapCard(
                         .clip(RoundedCornerShape(14.dp))
                         .background(
                             if (completedRoadmap) {
-                                SoftGreen
+                                MaterialTheme.colorScheme.secondaryContainer
                             } else {
-                                SoftPurple
+                                MaterialTheme.colorScheme.primaryContainer
                             }
                         ),
                     contentAlignment = Alignment.Center
@@ -1513,7 +1519,7 @@ private fun RoadmapCard(
                         text = title,
                         style =
                             MaterialTheme.typography.titleMedium,
-                        color = SkillLinkNavy,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold,
                         maxLines = 2
                     )
@@ -1528,7 +1534,7 @@ private fun RoadmapCard(
                             text = summary,
                             style =
                                 MaterialTheme.typography.bodySmall,
-                            color = TextSecondary,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 2
                         )
                     }
@@ -1543,7 +1549,7 @@ private fun RoadmapCard(
                         text = "⋮",
                         style =
                             MaterialTheme.typography.headlineSmall,
-                        color = TextSecondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -1570,7 +1576,7 @@ private fun RoadmapCard(
                         if (completedRoadmap) {
                             Green
                         } else {
-                            SkillLinkNavy
+                            MaterialTheme.colorScheme.onSurface
                         },
                     fontWeight = FontWeight.SemiBold
                 )
@@ -1597,32 +1603,53 @@ private fun RoadmapCard(
                 modifier = Modifier.height(8.dp)
             )
 
-            LinearProgressIndicator(
-                progress = {
-                    percentage.coerceIn(
-                        0f,
-                        1f
-                    )
-                },
+            val animatedProgress by animateFloatAsState(
+                targetValue = if (completedRoadmap) 1f else percentage.coerceIn(0f, 1f),
+                animationSpec = tween(durationMillis = 900),
+                label = "roadmapProgress"
+            )
+            val progressTrack = if (completedRoadmap) {
+                MaterialTheme.colorScheme.surfaceVariant
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            }
+            Canvas(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(
-                        RoundedCornerShape(20.dp)
-                    ),
-                color =
-                    if (completedRoadmap) {
-                        Green
-                    } else {
-                        SkillLinkPurple
-                    },
-                trackColor =
-                    if (completedRoadmap) {
-                        Color(0xFFDDF0E5)
-                    } else {
-                        Color(0xFFECEAF2)
-                    }
-            )
+                    .height(9.dp)
+            ) {
+                val radius = size.height / 2f
+                drawRoundRect(
+                    color = progressTrack,
+                    size = size,
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(radius)
+                )
+                val progressWidth = size.width * animatedProgress
+                if (progressWidth > 0f) {
+                    drawRoundRect(
+                        brush = if (completedRoadmap) {
+                            Brush.horizontalGradient(
+                                colors = listOf(Green, Green),
+                                startX = 0f,
+                                endX = size.width
+                            )
+                        } else {
+                            Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color(0xFFE34B4B),
+                                    Color(0xFFF18A36),
+                                    Color(0xFFF0C94A),
+                                    Color(0xFF8BCB58)
+                                ),
+                                startX = 0f,
+                                endX = size.width
+                            )
+                        },
+                        size = Size(progressWidth, size.height),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(radius)
+                    )
+                }
+            }
 
             Spacer(
                 modifier = Modifier.height(9.dp)
@@ -1637,7 +1664,7 @@ private fun RoadmapCard(
                     text = "$completed of $total lessons",
                     style =
                         MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 Spacer(
@@ -1653,7 +1680,7 @@ private fun RoadmapCard(
                             ),
                         style =
                             MaterialTheme.typography.bodySmall,
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1
                     )
                 }
@@ -1668,9 +1695,9 @@ private fun RoadmapCard(
                 shape = RoundedCornerShape(12.dp),
                 color =
                     if (completedRoadmap) {
-                        SoftGreen
+                        MaterialTheme.colorScheme.secondaryContainer
                     } else {
-                        SoftPurple
+                        MaterialTheme.colorScheme.primaryContainer
                     }
             ) {
 
@@ -1734,7 +1761,7 @@ private fun EmptyLearningState(
             modifier = Modifier
                 .size(78.dp)
                 .clip(CircleShape)
-                .background(SoftPurple),
+                .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center
         ) {
 
@@ -1755,7 +1782,7 @@ private fun EmptyLearningState(
             text = title,
             style =
                 MaterialTheme.typography.titleLarge,
-            color = SkillLinkNavy,
+            color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.Bold
         )
 
@@ -1767,7 +1794,7 @@ private fun EmptyLearningState(
             text = description,
             style =
                 MaterialTheme.typography.bodyMedium,
-            color = TextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.fillMaxWidth(),
             textAlign =
                 androidx.compose.ui.text.style.TextAlign.Center
@@ -1909,11 +1936,11 @@ private fun isProperRoadmapTitle(
     val invalidTitles =
         setOf(
             myLearningText("roadmap"),
-                myLearningText("learning roadmap"),
-                    myLearningText("your learning roadmap"),
-                        myLearningText("my roadmap"),
-                            myLearningText("personalised roadmap"),
-                                myLearningText("personalized roadmap")
+            myLearningText("learning roadmap"),
+            myLearningText("your learning roadmap"),
+            myLearningText("my roadmap"),
+            myLearningText("personalised roadmap"),
+            myLearningText("personalized roadmap")
         )
 
     return cleaned !in invalidTitles
@@ -1955,7 +1982,7 @@ private fun formatLastAccessed(
                 myLearningText("Today")
 
             yesterday ->
-            myLearningText("Yesterday")
+                myLearningText("Yesterday")
 
             else -> {
 

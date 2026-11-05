@@ -403,7 +403,7 @@ fun GenerateRoadmapScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(PageBackground)
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
     ) {
         // TOP BAR
@@ -416,7 +416,7 @@ fun GenerateRoadmapScreen(
             Surface(
                 onClick = onBack,
                 shape = RoundedCornerShape(13.dp),
-                color = White,
+                color = MaterialTheme.colorScheme.surface,
                 shadowElevation = 1.dp
             ) {
                 Box(
@@ -426,7 +426,7 @@ fun GenerateRoadmapScreen(
                     Text(
                         text = "‹",
                         style = MaterialTheme.typography.headlineSmall,
-                        color = SkillLinkNavy,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -440,7 +440,7 @@ fun GenerateRoadmapScreen(
                 Text(
                     text = roadmapText("New roadmap"),
                     style = MaterialTheme.typography.titleLarge,
-                    color = SkillLinkNavy,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold
                 )
 
@@ -515,7 +515,7 @@ fun GenerateRoadmapScreen(
             Text(
                 text = roadmapText("Skills you already know"),
                 style = MaterialTheme.typography.titleMedium,
-                color = SkillLinkNavy,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.SemiBold
             )
 
@@ -558,7 +558,7 @@ fun GenerateRoadmapScreen(
             Text(
                 text = roadmapText("What do you want to achieve?"),
                 style = MaterialTheme.typography.titleMedium,
-                color = SkillLinkNavy,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.SemiBold
             )
 
@@ -690,7 +690,7 @@ fun GenerateRoadmapScreen(
                 Text(
                     text = roadmapText("Learning pace"),
                     style = MaterialTheme.typography.titleMedium,
-                    color = SkillLinkNavy,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.SemiBold
                 )
             }
@@ -993,7 +993,7 @@ fun GenerateRoadmapScreen(
         ) {
             Text(
                 text = roadmapText("Cancel"),
-                color = SkillLinkNavy
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
 
@@ -1036,7 +1036,7 @@ private fun RoadmapSectionHeader(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
-                color = SkillLinkNavy,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Bold
             )
 
@@ -1062,7 +1062,7 @@ private fun FormCard(
             .fillMaxWidth()
             .padding(horizontal = 20.dp),
         shape = RoundedCornerShape(20.dp),
-        color = White,
+        color = MaterialTheme.colorScheme.surface,
         shadowElevation = 1.dp
     ) {
         Column(
