@@ -1,7 +1,6 @@
+
 package com.example.skilllinkapp.notifications
 
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.ui.platform.LocalContext
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -9,15 +8,22 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.skilllinkapp.LanguageSupport
+import com.example.skilllinkapp.data.NotificationTranslationCache
 import com.example.skilllinkapp.data.supabase
+import com.example.skilllinkapp.network.GeminiService
+import com.example.skilllinkapp.network.NotificationTranslationInput
 import io.github.jan.supabase.auth.auth
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -28,7 +34,6 @@ fun NotificationsScreen(
 ) {
 
     val scope = rememberCoroutineScope()
-
     val context = LocalContext.current
 
     var deletingNotificationIds by remember {
@@ -55,6 +60,80 @@ fun NotificationsScreen(
         mutableStateOf<String?>(null)
     }
 
+    // Stores translated notification titles and messages.
+    var translatedNotifications by remember {
+        mutableStateOf<Map<String, Pair<String, String>>>(emptyMap())
+    }
+
+    // Observe the selected application language.
+    val selectedLanguage = LanguageSupport.currentLanguage.value
+
+    // Local translations for the notification screen interface.
+    val uiTexts = when (selectedLanguage) {
+
+        LanguageSupport.ZULU -> mapOf(
+            "notifications" to "Izaziso",
+            "read_all" to "Maka konke njengokufundiwe",
+            "new" to "OKUSHA",
+            "delete_notification" to "Susa isaziso",
+            "delete_question" to "Susa isaziso?",
+            "delete_confirmation" to "Uqinisekile ukuthi ufuna ukususa lesi saziso unomphela? Lesi senzo ngeke sihlehliswe.",
+            "delete" to "Susa",
+            "cancel" to "Khansela",
+            "retry" to "Zama futhi",
+            "no_notifications" to "Awunazo izaziso okwamanje.",
+            "load_error" to "Ayikwazanga ukulayisha izaziso. Sicela uzame futhi.",
+            "mark_all_error" to "Ayikwazanga ukumaka zonke izaziso njengezifundiwe.",
+            "mark_read_error" to "Ayikwazanga ukumaka isaziso njengesifundiwe.",
+            "delete_error" to "Ayikwazanga ukususa isaziso. Sicela uzame futhi."
+        )
+
+        LanguageSupport.AFRIKAANS -> mapOf(
+            "notifications" to "Kennisgewings",
+            "read_all" to "Merk alles as gelees",
+            "new" to "NUUT",
+            "delete_notification" to "Verwyder kennisgewing",
+            "delete_question" to "Verwyder kennisgewing?",
+            "delete_confirmation" to "Is jy seker jy wil hierdie kennisgewing permanent verwyder? Hierdie aksie kan nie ongedaan gemaak word nie.",
+            "delete" to "Verwyder",
+            "cancel" to "Kanselleer",
+            "retry" to "Probeer weer",
+            "no_notifications" to "Jy het nog geen kennisgewings nie.",
+            "load_error" to "Kon nie kennisgewings laai nie. Probeer asseblief weer.",
+            "mark_all_error" to "Kon nie alle kennisgewings as gelees merk nie.",
+            "mark_read_error" to "Kon nie die kennisgewing as gelees merk nie.",
+            "delete_error" to "Kon nie die kennisgewing verwyder nie. Probeer asseblief weer."
+        )
+
+        else -> mapOf(
+            "notifications" to "Notifications",
+            "read_all" to "Read all",
+            "new" to "NEW",
+            "delete_notification" to "Delete notification",
+            "delete_question" to "Delete notification?",
+            "delete_confirmation" to "Are you sure you want to permanently delete this notification? This action cannot be undone.",
+            "delete" to "Delete",
+            "cancel" to "Cancel",
+            "retry" to "Retry",
+            "no_notifications" to "You don't have any notifications yet.",
+            "load_error" to "Unable to load notifications. Please try again.",
+            "mark_all_error" to "Unable to mark all notifications as read.",
+            "mark_read_error" to "Could not mark notification as read.",
+            "delete_error" to "Unable to delete notification. Please try again."
+        )
+    }
+
+    // Prepare notifications for batch translation.
+    val notificationTranslationInputs = remember(notifications) {
+        notifications.map { notification ->
+            NotificationTranslationInput(
+                id = notification.notificationId,
+                title = notification.title,
+                message = notification.message
+            )
+        }
+    }
+
     suspend fun loadNotifications() {
 
         val user = supabase.auth.currentUserOrNull()
@@ -79,8 +158,7 @@ fun NotificationsScreen(
 
         } catch (e: Exception) {
 
-            errorMessage =
-                "Unable to load notifications. Please try again."
+            errorMessage = uiTexts["load_error"]!!
 
         } finally {
 
@@ -93,25 +171,115 @@ fun NotificationsScreen(
         loadNotifications()
     }
 
-    // Refresh the list when a new push arrives.
+    // Refresh when a new notification arrives.
     LaunchedEffect(Unit) {
-
         NotificationEventBus.events.collect {
-
             loadNotifications()
+        }
+    }
+
+    // Translate all uncached notifications in one Gemini request.
+    LaunchedEffect(notificationTranslationInputs, selectedLanguage) {
+
+        translatedNotifications = emptyMap()
+
+        val targetLanguage = when (selectedLanguage) {
+            LanguageSupport.ZULU -> "isiZulu"
+            LanguageSupport.AFRIKAANS -> "Afrikaans"
+            else -> "English"
+        }
+
+        // English is the original notification language.
+        if (targetLanguage == "English") {
+            return@LaunchedEffect
+        }
+
+        val cachedTranslations =
+            mutableMapOf<String, Pair<String, String>>()
+
+        val notificationsToTranslate =
+            mutableListOf<NotificationTranslationInput>()
+
+        // Retrieve cached translations first.
+        for (notification in notificationTranslationInputs) {
+
+            val cachedTranslation = NotificationTranslationCache.get(
+                context = context,
+                notificationId = notification.id,
+                language = selectedLanguage
+            )
+
+            if (cachedTranslation != null) {
+
+                cachedTranslations[notification.id] = cachedTranslation
+
+            } else {
+
+                notificationsToTranslate.add(notification)
+            }
+        }
+
+        // Display cached translations immediately.
+        translatedNotifications = cachedTranslations
+
+        // Translate all uncached notifications together.
+        if (notificationsToTranslate.isNotEmpty()) {
+
+            try {
+
+                val newTranslations =
+                    GeminiService.translateNotifications(
+                        notifications = notificationsToTranslate,
+                        targetLanguage = targetLanguage
+                    )
+
+                // Save each translation locally.
+                newTranslations.forEach { (notificationId, translation) ->
+
+                    NotificationTranslationCache.save(
+                        context = context,
+                        notificationId = notificationId,
+                        language = selectedLanguage,
+                        title = translation.first,
+                        message = translation.second
+                    )
+                }
+
+                // Combine cached and newly generated translations.
+                translatedNotifications =
+                    cachedTranslations + newTranslations
+
+            } catch (exception: CancellationException) {
+
+                throw exception
+
+            } catch (exception: Exception) {
+
+                android.util.Log.e(
+                    "NotificationTranslation",
+                    "Translation failed: ${exception.message}",
+                    exception
+                )
+
+                Toast.makeText(
+                    context,
+                    "Translation failed. Please try again.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
         }
     }
 
     Scaffold(
         topBar = {
+
             TopAppBar(
                 modifier = Modifier.height(64.dp),
-
                 windowInsets = WindowInsets(0.dp),
 
                 title = {
                     Text(
-                        text = "Notifications",
+                        text = uiTexts["notifications"]!!,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -150,7 +318,6 @@ fun NotificationsScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-
                         CircularProgressIndicator()
                     }
                 }
@@ -174,16 +341,13 @@ fun NotificationsScreen(
 
                         Button(
                             onClick = {
-
                                 scope.launch {
-
                                     isLoading = true
                                     loadNotifications()
                                 }
                             }
                         ) {
-
-                            Text("Retry")
+                            Text(uiTexts["retry"]!!)
                         }
                     }
                 }
@@ -194,9 +358,8 @@ fun NotificationsScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-
                         Text(
-                            text = "You don't have any notifications yet.",
+                            text = uiTexts["no_notifications"]!!,
                             color = Color.Gray
                         )
                     }
@@ -207,7 +370,7 @@ fun NotificationsScreen(
                     val unreadCount =
                         notifications.count { !it.isRead }
 
-                    // Read all button.
+                    // Mark all notifications as read.
                     if (unreadCount > 0) {
 
                         Row(
@@ -218,15 +381,13 @@ fun NotificationsScreen(
                                     vertical = 8.dp
                                 ),
 
-                            horizontalArrangement =
-                                Arrangement.End
+                            horizontalArrangement = Arrangement.End
                         ) {
 
                             TextButton(
                                 enabled = !isMarkingAllRead,
 
                                 onClick = {
-
                                     scope.launch {
 
                                         val user =
@@ -252,8 +413,11 @@ fun NotificationsScreen(
 
                                             } catch (e: Exception) {
 
-                                                errorMessage =
-                                                    "Unable to mark all notifications as read."
+                                                Toast.makeText(
+                                                    context,
+                                                    uiTexts["mark_all_error"]!!,
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
 
                                             } finally {
 
@@ -262,6 +426,7 @@ fun NotificationsScreen(
                                         }
                                     }
                                 }
+
                             ) {
 
                                 if (isMarkingAllRead) {
@@ -273,29 +438,29 @@ fun NotificationsScreen(
 
                                 } else {
 
-                                    Text("Read all")
+                                    Text(uiTexts["read_all"]!!)
                                 }
                             }
                         }
                     }
 
                     LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize(),
+                        modifier = Modifier.fillMaxSize(),
 
                         contentPadding = PaddingValues(16.dp),
 
                         verticalArrangement =
                             Arrangement.spacedBy(12.dp)
+
                     ) {
 
                         items(
                             items = notifications,
                             key = { it.notificationId }
+
                         ) { notification ->
 
                             Card(
-
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
@@ -323,9 +488,7 @@ fun NotificationsScreen(
                                                                 notification.notificationId
                                                             ) {
 
-                                                                it.copy(
-                                                                    isRead = true
-                                                                )
+                                                                it.copy(isRead = true)
 
                                                             } else {
 
@@ -341,8 +504,11 @@ fun NotificationsScreen(
 
                                                 } catch (e: Exception) {
 
-                                                    errorMessage =
-                                                        "Could not mark notification as read."
+                                                    Toast.makeText(
+                                                        context,
+                                                        uiTexts["mark_read_error"]!!,
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
                                                 }
                                             }
                                         }
@@ -372,8 +538,11 @@ fun NotificationsScreen(
                                             Alignment.CenterVertically
                                     ) {
 
+                                        // Display translated title.
                                         Text(
-                                            text = notification.title,
+                                            text = translatedNotifications[
+                                                notification.notificationId
+                                            ]?.first ?: notification.title,
 
                                             fontWeight = FontWeight.Bold,
 
@@ -383,18 +552,13 @@ fun NotificationsScreen(
                                         if (!notification.isRead) {
 
                                             Surface(
-
-                                                color =
-                                                    MaterialTheme.colorScheme.primary,
-
-                                                shape =
-                                                    MaterialTheme.shapes.small
+                                                color = MaterialTheme.colorScheme.primary,
+                                                shape = MaterialTheme.shapes.small
 
                                             ) {
 
                                                 Text(
-                                                    text = "NEW",
-
+                                                    text = uiTexts["new"]!!,
                                                     color = Color.White,
 
                                                     modifier = Modifier.padding(
@@ -402,27 +566,35 @@ fun NotificationsScreen(
                                                         vertical = 4.dp
                                                     ),
 
-                                                    style =
-                                                        MaterialTheme.typography.labelSmall
+                                                    style = MaterialTheme.typography.labelSmall
                                                 )
                                             }
                                         }
 
                                         IconButton(
-                                            enabled = notification.notificationId !in deletingNotificationIds,
+                                            enabled =
+                                                notification.notificationId !in deletingNotificationIds,
+
                                             onClick = {
                                                 notificationToDelete = notification
                                             }
+
                                         ) {
-                                            if (notification.notificationId in deletingNotificationIds) {
+
+                                            if (
+                                                notification.notificationId in deletingNotificationIds
+                                            ) {
+
                                                 CircularProgressIndicator(
                                                     modifier = Modifier.size(18.dp),
                                                     strokeWidth = 2.dp
                                                 )
+
                                             } else {
+
                                                 Icon(
                                                     imageVector = Icons.Default.Delete,
-                                                    contentDescription = "Delete notification",
+                                                    contentDescription = uiTexts["delete_notification"]!!,
                                                     tint = MaterialTheme.colorScheme.error
                                                 )
                                             }
@@ -433,7 +605,12 @@ fun NotificationsScreen(
                                         modifier = Modifier.height(8.dp)
                                     )
 
-                                    Text(notification.message)
+                                    // Display translated message.
+                                    Text(
+                                        text = translatedNotifications[
+                                            notification.notificationId
+                                        ]?.second ?: notification.message
+                                    )
 
                                     Spacer(
                                         modifier = Modifier.height(8.dp)
@@ -447,30 +624,39 @@ fun NotificationsScreen(
         }
     }
 
+    // Delete notification confirmation dialog.
     notificationToDelete?.let { notification ->
 
         AlertDialog(
+
             onDismissRequest = {
                 notificationToDelete = null
             },
+
             title = {
-                Text("Delete notification?")
+                Text(uiTexts["delete_question"]!!)
             },
+
             text = {
-                Text(
-                    "Are you sure you want to permanently delete this notification? This action cannot be undone."
-                )
+                Text(uiTexts["delete_confirmation"]!!)
             },
+
             confirmButton = {
+
                 TextButton(
+
                     onClick = {
+
                         scope.launch {
-                            val notificationId = notification.notificationId
+
+                            val notificationId =
+                                notification.notificationId
 
                             deletingNotificationIds =
                                 deletingNotificationIds + notificationId
 
                             try {
+
                                 NotificationRepository.deleteNotification(
                                     notificationId = notificationId,
                                     userId = notification.userId
@@ -483,39 +669,51 @@ fun NotificationsScreen(
 
                                 notifications = updatedNotifications
 
+                                // Remove its displayed translation.
+                                translatedNotifications =
+                                    translatedNotifications - notificationId
+
                                 onUnreadCountChanged(
-                                    updatedNotifications.count { !it.isRead }
+                                    updatedNotifications.count {
+                                        !it.isRead
+                                    }
                                 )
 
                                 notificationToDelete = null
 
                             } catch (e: Exception) {
+
                                 Toast.makeText(
                                     context,
-                                    "Unable to delete notification. Please try again.",
+                                    uiTexts["delete_error"]!!,
                                     Toast.LENGTH_SHORT
                                 ).show()
 
                             } finally {
+
                                 deletingNotificationIds =
                                     deletingNotificationIds - notificationId
                             }
                         }
                     }
+
                 ) {
+
                     Text(
-                        "Delete",
+                        uiTexts["delete"]!!,
                         color = MaterialTheme.colorScheme.error
                     )
                 }
             },
+
             dismissButton = {
+
                 TextButton(
                     onClick = {
                         notificationToDelete = null
                     }
                 ) {
-                    Text("Cancel")
+                    Text(uiTexts["cancel"]!!)
                 }
             }
         )

@@ -1,9 +1,10 @@
+
 package com.example.skilllinkapp.network
 
-import io.github.jan.supabase.functions.functions
-import com.example.skilllinkapp.data.supabase
-import io.ktor.client.call.body
 import com.example.skilllinkapp.LanguageSupport
+import com.example.skilllinkapp.data.supabase
+import io.github.jan.supabase.functions.*
+import io.ktor.client.call.body
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -13,6 +14,12 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+
+data class NotificationTranslationInput(
+    val id: String,
+    val title: String,
+    val message: String
+)
 
 object GeminiService {
 
@@ -120,60 +127,197 @@ object GeminiService {
         }
 
         val prompt = """
-        You are a professional multilingual educational translator.
+            You are a professional multilingual educational translator.
 
-        YOUR TASK:
-        Translate the entire learning roadmap into $targetLanguage.
+            YOUR TASK:
+            Translate the entire learning roadmap into $targetLanguage.
 
-        LANGUAGE REQUIREMENT:
-        The output MUST be written in $targetLanguage.
+            LANGUAGE REQUIREMENT:
+            The output MUST be written in $targetLanguage.
 
-        Translate ALL learner-facing content, including:
-        - Roadmap title
-        - Roadmap summary
-        - Every week title
-        - Every week description
-        - Every lesson title and description, if present
+            Translate ALL learner-facing content, including:
+            - Roadmap title
+            - Roadmap summary
+            - Every week title
+            - Every week description
+            - Every lesson title and description, if present
 
-        IMPORTANT:
-        1. Do not leave ordinary English sentences untranslated.
-        2. Do not return the original English roadmap.
-        3. Do not summarize or shorten the content.
-        4. Preserve the original meaning and detail.
-        5. Keep technical terms, programming keywords and product
-           names in English where appropriate.
-        6. Keep JSON property names unchanged.
-        7. Preserve the exact number and order of weeks.
-        8. Preserve exactly three lessons per week.
-        9. Do not add or remove any content.
-        10. Return valid JSON only. No Markdown or explanations.
+            IMPORTANT:
+            1. Do not leave ordinary English sentences untranslated.
+            2. Do not return the original English roadmap.
+            3. Do not summarize or shorten the content.
+            4. Preserve the original meaning and detail.
+            5. Keep technical terms, programming keywords and product
+               names in English where appropriate.
+            6. Keep JSON property names unchanged.
+            7. Preserve the exact number and order of weeks.
+            8. Preserve exactly three lessons per week.
+            9. Do not add or remove any content.
+            10. Return valid JSON only. No Markdown or explanations.
 
-        REQUIRED JSON STRUCTURE:
-        {
-          "title": "Translated roadmap title",
-          "summary": "Translated roadmap summary",
-          "weeks": [
+            REQUIRED JSON STRUCTURE:
             {
-              "title": "Translated week title",
-              "description": "Translated description",
-              "lessons": [
-                "Translated lesson 1",
-                "Translated lesson 2",
-                "Translated lesson 3"
+              "title": "Translated roadmap title",
+              "summary": "Translated roadmap summary",
+              "weeks": [
+                {
+                  "title": "Translated week title",
+                  "description": "Translated description",
+                  "lessons": [
+                    "Translated lesson 1",
+                    "Translated lesson 2",
+                    "Translated lesson 3"
+                  ]
+                }
               ]
             }
-          ]
-        }
 
-        ORIGINAL ROADMAP:
-        $roadmapJson
-    """.trimIndent()
+            ORIGINAL ROADMAP:
+            $roadmapJson
+        """.trimIndent()
 
         val translatedText = requestGeneratedText(prompt)
 
         validateRoadmapJson(translatedText)
 
         return translatedText
+    }
+
+    /**
+     * Translates all supplied notifications in ONE Gemini request.
+     */
+    suspend fun translateNotifications(
+        notifications: List<NotificationTranslationInput>,
+        targetLanguage: String
+    ): Map<String, Pair<String, String>> {
+
+        require(
+            targetLanguage in listOf("English", "isiZulu", "Afrikaans")
+        ) {
+            "Unsupported language: $targetLanguage"
+        }
+
+        if (notifications.isEmpty()) {
+            return emptyMap()
+        }
+
+        if (targetLanguage == "English") {
+            return notifications.associate {
+                it.id to (it.title to it.message)
+            }
+        }
+
+        val originalNotificationsJson = buildJsonArray {
+            notifications.forEach { notification ->
+                add(
+                    buildJsonObject {
+                        put("id", notification.id)
+                        put("title", notification.title)
+                        put("message", notification.message)
+                    }
+                )
+            }
+        }
+
+        val prompt = """
+            You are an expert professional translator fluent in English,
+            South African Afrikaans, and isiZulu.
+
+            YOUR TASK:
+            Translate EVERY notification in the input JSON array into
+            $targetLanguage.
+
+            STRICT LANGUAGE REQUIREMENTS:
+            1. The target language is exactly $targetLanguage.
+            2. If the target is Afrikaans, write in natural, standard
+               South African Afrikaans. DO NOT use isiZulu.
+            3. If the target is isiZulu, write in natural, standard isiZulu.
+               DO NOT use Afrikaans.
+            4. Translate every notification title and message.
+            5. Do not leave ordinary English sentences untranslated.
+            6. Preserve technical terms and proper nouns where appropriate.
+            7. Preserve the original meaning and tone.
+            8. Do not summarize, omit, or add information.
+            9. Preserve every notification ID exactly.
+            10. Return exactly the same number of notifications.
+            11. Keep the JSON property names in English.
+            12. Return ONLY valid JSON. No Markdown or explanations.
+
+            INPUT NOTIFICATIONS:
+            $originalNotificationsJson
+
+            REQUIRED OUTPUT:
+            [
+              {
+                "id": "original-notification-id",
+                "title": "Translated title",
+                "message": "Translated message"
+              }
+            ]
+
+            IMPORTANT:
+            Before returning the result, verify that every notification
+            is translated into $targetLanguage, not another language.
+        """.trimIndent()
+
+        val translatedText = requestGeneratedText(prompt)
+
+        val translatedArray = try {
+            Json.parseToJsonElement(translatedText).jsonArray
+        } catch (exception: Exception) {
+            throw IllegalArgumentException(
+                "Gemini returned invalid notification translation JSON.",
+                exception
+            )
+        }
+
+        require(translatedArray.size == notifications.size) {
+            "Gemini returned ${translatedArray.size} translations, " +
+                    "but ${notifications.size} were expected."
+        }
+
+        val translatedNotifications =
+            mutableMapOf<String, Pair<String, String>>()
+
+        for (element in translatedArray) {
+
+            val item = try {
+                element.jsonObject
+            } catch (exception: Exception) {
+                throw IllegalArgumentException(
+                    "Gemini returned an invalid notification object.",
+                    exception
+                )
+            }
+
+            val id = item["id"]?.jsonPrimitive?.content
+            val translatedTitle = item["title"]?.jsonPrimitive?.content
+            val translatedMessage = item["message"]?.jsonPrimitive?.content
+
+            require(
+                !id.isNullOrBlank() &&
+                        !translatedTitle.isNullOrBlank() &&
+                        !translatedMessage.isNullOrBlank()
+            ) {
+                "Gemini returned an incomplete notification translation."
+            }
+
+            require(notifications.any { it.id == id }) {
+                "Gemini returned an unexpected notification ID: $id"
+            }
+
+            require(!translatedNotifications.containsKey(id)) {
+                "Gemini returned a duplicate notification ID: $id"
+            }
+
+            translatedNotifications[id] = translatedTitle to translatedMessage
+        }
+
+        require(translatedNotifications.size == notifications.size) {
+            "Gemini did not translate every notification."
+        }
+
+        return translatedNotifications
     }
 
     /**
@@ -230,6 +374,7 @@ object GeminiService {
         }
 
         weeks.forEachIndexed { index, weekElement ->
+
             val week: JsonObject = try {
                 weekElement.jsonObject
             } catch (exception: Exception) {
@@ -252,6 +397,7 @@ object GeminiService {
             }
 
             lessons.forEachIndexed { lessonIndex, lesson ->
+
                 val text = try {
                     lesson.jsonPrimitive.content
                 } catch (exception: Exception) {

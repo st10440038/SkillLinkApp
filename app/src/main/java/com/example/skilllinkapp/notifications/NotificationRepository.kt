@@ -55,14 +55,23 @@ object NotificationRepository {
         notificationId: String,
         userId: String
     ) {
-        supabase
+        val deletedNotifications = supabase
             .from("notifications")
             .delete {
+                select()
+
                 filter {
                     eq("notification_id", notificationId)
                     eq("user_id", userId)
                 }
             }
+            .decodeList<Notification>()
+
+        if (deletedNotifications.isEmpty()) {
+            throw IllegalStateException(
+                "No notification was deleted. Check the notification ID and Supabase permissions."
+            )
+        }
     }
 
     suspend fun hasNotification(
